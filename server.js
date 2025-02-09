@@ -93,8 +93,15 @@ app.get('/favicon.ico', (req, res) => {
 });
 
 // 静态文件服务
-app.use(express.static('public'));
+app.use(express.static('public', {
+    index: false  // 禁用自动服务 index.html
+}));
 app.use('/uploads', express.static('uploads'));
+
+// 管理员页面路由 - 使用特定路径
+app.get('/1101admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Serve chat pages
 app.get('/:password/:roomId', adminAuthMiddleware, (req, res) => {
@@ -103,6 +110,11 @@ app.get('/:password/:roomId', adminAuthMiddleware, (req, res) => {
 
 app.get('/:roomId', chatAuthMiddleware, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'chat.html'));
+});
+
+// 根路径处理 - 返回444
+app.get('/', (req, res) => {
+    res.status(444).end();
 });
 
 // CSP和基本安全头
@@ -185,18 +197,10 @@ app.use((req, res, next) => {
     res.status(444).end();
 });
 
-// 404 handler - 移到聊天室路由后面
+// 404 handler - 移到最后
 app.use((req, res) => {
     res.status(404).sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-
-// Serve index.html for root route
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// 错误处理
-app.use(errorHandler);
 
 // Debug environment variables
 console.log('Environment variables:');

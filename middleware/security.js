@@ -147,9 +147,9 @@ const whitelist = [
     /^\/uploads\//,
     /^\/socket\.io\//,
     /^\/api\//,
+    // 管理员路径
+    /^\/1101admin$/,
     // 页面
-    /^\/$/,
-    /^\/index\.html$/,
     /^\/loading\.html$/,
     /^\/favicon\.ico$/,
     // 聊天室路径 - 新格式
