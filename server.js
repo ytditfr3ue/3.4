@@ -62,9 +62,6 @@ app.use(express.json({ limit: requestLimits.json }));
 app.use(express.urlencoded({ extended: true, limit: requestLimits.urlencoded }));
 app.use(express.raw({ limit: requestLimits.raw }));
 
-// 添加路径验证中间件（放在最前面）
-app.use(pathValidation);
-
 // 添加调试日志
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] Request: ${req.method} ${req.path}`);
@@ -103,19 +100,13 @@ app.get('/1101admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Serve chat pages
-app.get('/:password/:roomId', adminAuthMiddleware, (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'chat.html'));
-});
-
-app.get('/:roomId', chatAuthMiddleware, (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'chat.html'));
-});
-
 // 根路径处理 - 返回444
 app.get('/', (req, res) => {
     res.status(444).end();
 });
+
+// 添加路径验证中间件（移到这里，在管理员路由之后）
+app.use(pathValidation);
 
 // CSP和基本安全头
 app.use(csp);
@@ -124,6 +115,15 @@ app.use(csp);
 app.use(pathNormalization);  // 路径规范化
 app.use(pathProtection);  // 路径保护
 app.use(fileTypeValidation);  // 文件类型验证
+
+// Serve chat pages
+app.get('/:password/:roomId', adminAuthMiddleware, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'chat.html'));
+});
+
+app.get('/:roomId', chatAuthMiddleware, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'chat.html'));
+});
 
 // 访问控制中间件
 app.use(resourceProtection);  // 资源访问控制
