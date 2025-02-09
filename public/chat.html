@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>채팅방</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            height: 100vh;
+            padding-bottom: 60px;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .chat-page {
+            width: 100%;
+            height: 100%;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            background: white;
+        }
+
+        .chat-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .chat-input {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 10px;
+            background: white;
+            border-top: 1px solid #DEE2E6;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            max-width: 1000px;
+            margin: 0 auto;
+            z-index: 100;
+        }
+
+        @media (min-width: 1024px) {
+            .chat-page {
+                max-width: 1000px;
+                margin: 0 auto;
+                height: 100vh;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                position: relative;
+            }
+
+            .chat-input {
+                position: absolute;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 加载页面 -->
+    <iframe id="loadingPage" src="/loading.html" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; border: none; z-index: 9999; background: white; transition: opacity 0.3s ease;"></iframe>
+
+    <div class="chat-page">
+        <!-- 快捷回复区域 (管理员专用) -->
+        <div id="quickReplySection" class="quick-reply-section hidden">
+            <div class="quick-reply-header">
+                <button id="addQuickReply">추가</button>
+                <button id="deleteQuickReply">삭제</button>
+            </div>
+            <div id="quickReplyList" class="quick-reply-list">
+                <!-- 快捷回复列表 -->
+            </div>
+        </div>
+
+        <!-- 聊天区域 -->
+        <div class="chat-container">
+            <div class="chat-header">
+                <h2 id="roomName"></h2>
+            </div>
+            <div class="chat-messages" id="messageContainer">
+                <!-- 消息列表 -->
+            </div>
+            <div class="chat-input">
+                <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                <button id="uploadImageBtn" style="flex-shrink: 0; padding: 8px; background: none; border: 1px solid #DEE2E6;">
+                    <img src="/images/image-icon.svg" alt="이미지 업로드" width="24" style="opacity: 0.6;">
+                </button>
+                <input type="text" id="messageInput" placeholder="메시지를 입력하세요." maxlength="1000" style="flex: 1; min-width: 0;">
+                <button id="sendButton" style="flex-shrink: 0; width: 80px;">전송</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 图片预览模态框 -->
+    <div class="image-modal" id="imageModal">
+        <img id="modalImage" src="" alt="이미지 미리보기">
+    </div>
+
+    <!-- 快捷回复添加模态框 -->
+    <div id="addQuickReplyModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>빠른 답장 추가</h3>
+            <textarea id="quickReplyContent" placeholder="빠른 답장 내용을 입력하세요"></textarea>
+            <div class="modal-buttons">
+                <button id="saveQuickReply">저장</button>
+                <button id="cancelQuickReply">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 快捷回复删除模态框 -->
+    <div id="deleteQuickReplyModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>삭제할 빠른 답장 선택</h3>
+            <div class="quick-reply-delete-list"></div>
+            <div class="modal-buttons">
+                <button id="confirmDeleteQuickReply">확인</button>
+                <button id="cancelDeleteQuickReply" class="cancel-btn">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/chat.js"></script>
+    <script>
+        window.addEventListener("resize", function() {
+            document.body.style.height = window.innerHeight + "px";
+        });
+        // 初始设置
+        document.body.style.height = window.innerHeight + "px";
+    </script>
+</body>
+</html> 
