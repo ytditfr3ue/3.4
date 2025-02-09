@@ -293,20 +293,32 @@ async function copyRoomLink(roomId, type) {
 
 // 删除聊天室
 function deleteRoom(roomId) {
-    // 获取房间名称
-    const roomElement = document.querySelector(`[data-room-id="${roomId}"]`).closest('.room-item');
-    const roomName = roomElement.querySelector('h4').textContent;
+    const roomElement = document.querySelector(`[data-room-id="${roomId}"]`);
+    if (!roomElement) {
+        console.error('Room element not found');
+        showNotification('채팅방을 찾을 수 없습니다', 'error');
+        return;
+    }
+    
+    const roomItemElement = roomElement.closest('.room-item');
+    if (!roomItemElement) {
+        console.error('Room item element not found');
+        showNotification('채팅방 정보를 찾을 수 없습니다', 'error');
+        return;
+    }
+    
+    const roomNameElement = roomItemElement.querySelector('h4');
+    if (!roomNameElement) {
+        console.error('Room name element not found');
+        showNotification('채팅방 이름을 찾을 수 없습니다', 'error');
+        return;
+    }
     
     roomToDelete = roomId;
-    roomToDeleteName = roomName;
+    roomToDeleteName = roomNameElement.textContent;
     
-    // 更新模态框中的房间名称
-    deleteRoomNameSpan.textContent = roomName;
-    
-    // 显示模态框
+    deleteRoomNameSpan.textContent = roomToDeleteName;
     deleteConfirmModal.classList.remove('hidden');
-    
-    // 聚焦删除按钮
     confirmDeleteBtn.focus();
 }
 
@@ -487,17 +499,29 @@ async function loadBannedIPs() {
                 'Authorization': `Bearer ${token}`
             }
         });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         
-        bannedIPsContainer.innerHTML = data.bannedIPs.map(ban => `
-            <div class="banned-ip">
-                <span class="ip">${ban.ip}</span>
-                <span class="expiry">${formatDate(new Date(ban.expiry))}</span>
-            </div>
-        `).join('') || '<p>차단된 IP가 없습니다</p>';
+        if (!data || !data.bannedIPs) {
+            throw new Error('Invalid response format');
+        }
+        
+        bannedIPsContainer.innerHTML = data.bannedIPs.length > 0 
+            ? data.bannedIPs.map(ban => `
+                <div class="banned-ip">
+                    <span class="ip">${ban.ip}</span>
+                    <span class="expiry">${formatDate(new Date(ban.expiry))}</span>
+                </div>
+            `).join('')
+            : '<p>차단된 IP가 없습니다</p>';
     } catch (error) {
         console.error('Load banned IPs failed:', error);
         showNotification('차단된 IP 목록을 불러올 수 없습니다', 'error');
+        bannedIPsContainer.innerHTML = '<p class="error">차단된 IP 목록을 불러오지 못했습니다.</p>';
     }
 }
 
