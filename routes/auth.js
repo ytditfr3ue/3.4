@@ -111,8 +111,12 @@ router.get('/security-logs', authMiddleware, async (req, res) => {
 // 获取被封禁的IP列表
 router.get('/banned-ips', authMiddleware, (req, res) => {
     try {
-        const { bannedIPs } = require('../middleware/security');
-        const bannedList = Array.from(bannedIPs.entries()).map(([ip, info]) => ({
+        const security = require('../middleware/security');
+        if (!security.bannedIPs) {
+            return res.json({ bannedIPs: [] });
+        }
+        
+        const bannedList = Array.from(security.bannedIPs.entries()).map(([ip, info]) => ({
             ip,
             expiry: info.expiry,
             reason: info.reason

@@ -396,5 +396,7 @@ module.exports = {
     directoryProtection,
     resourceProtection,
     apiProtection,
-    getRealIP
+    getRealIP,
+    bannedIPs,
+    isIPBanned
 }; 
