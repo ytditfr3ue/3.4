@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Icon Generator</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .icon-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        canvas {
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="icon-container">
+        <h3>180x180 (apple-touch-icon)</h3>
+        <canvas id="large" width="180" height="180"></canvas>
+    </div>
+    <div class="icon-container">
+        <h3>32x32 (favicon)</h3>
+        <canvas id="small" width="32" height="32"></canvas>
+    </div>
+
+    <script>
+        function drawIcon(canvas, size) {
+            const ctx = canvas.getContext('2d');
+            
+            // 绘制红色圆形背景
+            ctx.fillStyle = '#ff0000';
+            ctx.beginPath();
+            ctx.arc(size/2, size/2, size/2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 绘制白色闪电
+            ctx.fillStyle = '#ffffff';
+            const scale = size / 100; // 基于100px的原始尺寸
+            const centerX = size / 2;
+            const centerY = size / 2;
+            
+            // 使用clip-path的坐标计算闪电形状
+            ctx.beginPath();
+            ctx.moveTo(centerX + (18 * scale), centerY - (25 * scale));  // 68% 0%
+            ctx.lineTo(centerX + (15 * scale), centerY - (6 * scale));   // 65% 44%
+            ctx.lineTo(centerX + (50 * scale), centerY - (6 * scale));   // 100% 44%
+            ctx.lineTo(centerX - (18 * scale), centerY + (25 * scale));  // 32% 100%
+            ctx.lineTo(centerX - (15 * scale), centerY + (6 * scale));   // 35% 56%
+            ctx.lineTo(centerX - (50 * scale), centerY + (6 * scale));   // 0% 56%
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // 绘制大图标
+        drawIcon(document.getElementById('large'), 180);
+        
+        // 绘制小图标
+        drawIcon(document.getElementById('small'), 32);
+    </script>
+</body>
+</html> 
