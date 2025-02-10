@@ -155,7 +155,7 @@ function connectSocket() {
     socket.on('roomDeleted', () => {
         cleanupRoom(roomId);
         showNotification('此聊天室已被删除', 'error');
-        window.location.href = 'https://www.naver.com';
+        window.location.href = 'https://m.bunjang.co.kr';
     });
 
     socket.on('userJoined', ({ onlineCount: count }) => {
