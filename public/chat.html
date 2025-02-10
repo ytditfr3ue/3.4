@@ -2,25 +2,242 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>채팅방</title>
-    <link rel="stylesheet" href="/css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            height: 100vh;
-            padding-bottom: 60px;
+        /* 基础设置 */
+        :root {
+            --chat-width: 600px;
+            --chat-height: 800px;
+            --chat-ratio: calc(800 / 600);
+            --quick-reply-width: 280px;
+            --font-family: "Noto Sans KR", -apple-system, BlinkMacSystemFont, system-ui, 
+                Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", 
+                "Malgun Gothic", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+            --safe-area-inset-top: env(safe-area-inset-top, 0px);
+            --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-area-inset-left: env(safe-area-inset-left, 0px);
+            --safe-area-inset-right: env(safe-area-inset-right, 0px);
+        }
+
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: var(--font-family);
+        }
+
+        *::before,
+        *::after {
+            font-family: var(--font-family);
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+            overscroll-behavior: none;
+        }
+
+        /* 整体容器样式 */
+        .chat-wrapper {
+            display: flex;
+            justify-content: flex-start;
+            align-items: stretch;
+            width: var(--chat-width);
+            height: var(--chat-height);
+            position: relative;
+            background: white;
+        }
+
+        /* 管理员模式下的容器样式 */
+        body.admin-mode .chat-wrapper {
+            width: calc(var(--chat-width) + var(--quick-reply-width));
+        }
+
+        /* 系统通知样式优化 */
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 1100;
+            opacity: 0;
+            animation: fadeInOut 3s ease-in-out;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translate(-50%, -20px); }
+            15% { opacity: 1; transform: translate(-50%, 0); }
+            85% { opacity: 1; transform: translate(-50%, 0); }
+            100% { opacity: 0; transform: translate(-50%, -20px); }
+        }
+
+        .notification.error {
+            background: rgba(220, 53, 69, 0.9);
+        }
+
+        /* 系统消息样式 */
+        .message.system {
+            justify-content: center;
+            margin: 8px 0;
+            padding: 0 20px;
+        }
+
+        .message.system .message-content {
+            background-color: rgba(0, 0, 0, 0.05);
+            color: #666;
+            font-size: 13px;
+            padding: 8px 16px;
+            border-radius: 16px;
+            text-align: center;
+            border: none;
+            max-width: none;
+            width: auto;
+            display: inline-block;
+        }
+
+        /* 消息区域滚动控制 */
+        .chat-messages {
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            touch-action: pan-y;
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: white;
+            border-top: 1px solid #F6F6F6;
+            border-bottom: 1px solid #F6F6F6;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 快捷回复区域优化 */
+        .quick-reply-section {
+            width: 20%;
+            height: var(--chat-height);
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            display: none;
+            flex-direction: column;
+            padding: 15px;
+            position: relative;
+        }
+
+        /* 管理员模式下显示快捷回复区 */
+        body.admin-mode .quick-reply-section {
+            display: flex;
+        }
+
+        .quick-reply-section::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 1px;
+            height: 100%;
+            background: linear-gradient(to bottom, 
+                rgba(224, 224, 224, 0) 0%,
+                rgba(224, 224, 224, 1) 10%,
+                rgba(224, 224, 224, 1) 90%,
+                rgba(224, 224, 224, 0) 100%
+            );
+        }
+
+        .quick-reply-header {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .quick-reply-header button {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .quick-reply-header button:hover {
+            background: #0056b3;
+        }
+
+        .quick-reply-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .quick-reply-item {
+            width: 224.1px;
+            height: 45px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
             overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .quick-reply-item:hover {
+            background: #fff;
+            border-color: #e9ecef;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            overflow: visible;
+            z-index: 10;
+        }
+
+        .quick-reply-item .reply-content {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .quick-reply-item:hover .reply-content {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: auto;
+            min-height: 45px;
+            padding: 12px 15px;
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            word-break: break-all;
+            z-index: 100;
+            overflow-wrap: break-word;
         }
 
         .chat-page {
-            width: 100%;
-            height: 100%;
+            background: white;
+            position: relative;
+            overflow: hidden;
             display: none;
             opacity: 0;
             transition: opacity 0.3s ease;
-            background: white;
+            width: var(--chat-width);
+            flex: 1;
         }
 
         .chat-container {
@@ -29,37 +246,582 @@
             display: flex;
             flex-direction: column;
             position: relative;
+            padding-bottom: 76px;
         }
 
+        .chat-header {
+            padding: 12px 20px;
+            border-bottom: 1px solid #F6F6F6;
+            background: white;
+        }
+
+        .chat-header h2 {
+            font-size: 18px;
+            font-weight: 500;
+            color: rgb(25, 25, 25);
+            line-height: 1.2;
+        }
+
+        /* 单条消息样式 */
+        .message {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-end;
+            margin-bottom: 8px;
+            gap: 8px;
+        }
+
+        .message.self {
+            flex-direction: row-reverse;
+        }
+
+        .message.other {
+            flex-direction: row;
+        }
+
+        /* 图片消息样式 */
+        .message-content {
+            width: fit-content;
+            max-width: 70%;
+            border-radius: 25px;
+            font-size: 15px;
+            line-height: 1.4;
+            color: rgb(25, 25, 25);
+            overflow-wrap: break-word;
+        }
+
+        /* 文字消息样式 */
+        .message-content:not(:has(img)) {
+            padding: 14px 18px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            word-break: break-all;
+        }
+
+        /* 图片消息不需要气泡样式 */
+        .message-content:has(img) {
+            padding: 0;
+            background: none !important;
+            border: none !important;
+        }
+
+        .message.self .message-content:not(:has(img)) {
+            background-color: #F6F6F6;
+            color: rgb(25, 25, 25);
+            border: none;
+        }
+
+        .message.other .message-content:not(:has(img)) {
+            background-color: white;
+            color: rgb(25, 25, 25);
+            border: 1px solid #E5E5E5;
+        }
+
+        /* 图片样式优化 */
+        .message-content img {
+            max-width: 280px;
+            max-height: 200px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        /* 移动端图片样式调整 */
+        @media screen and (max-width: 511px) {
+            .message-content img {
+                max-width: 240px;
+                max-height: 180px;
+            }
+        }
+
+        /* 时间样式 */
+        .message-time {
+            font-size: 9.4px;
+            color: #adb4bb;
+            flex-shrink: 0;
+            letter-spacing: -0.45px;
+            font-weight: 500;
+            text-align: left;
+        }
+
+        /* 输入区域样式 */
         .chat-input {
-            position: fixed;
+            position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
-            padding: 10px;
+            height: 76px;
+            padding: 12px 16px;
             background: white;
-            border-top: 1px solid #DEE2E6;
+            border-top: 1px solid #F6F6F6;
             display: flex;
             align-items: center;
-            gap: 6px;
-            max-width: 1000px;
-            margin: 0 auto;
-            z-index: 100;
+            gap: 8px;
+            width: 100%;  /* 改为100%以支持响应式 */
         }
 
-        @media (min-width: 1024px) {
+        .input-wrapper {
+            width: 100%;  /* 改为100%以支持响应式 */
+            height: 51px;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            background: #fafafa;
+            border-radius: 25.5px;
+            padding: 8px 16px;
+            margin: 0 auto;
+            max-width: 471px;  /* 使用max-width代替固定width */
+        }
+
+        .input-wrapper:focus-within {
+            box-shadow: 0 0 0 2px rgba(76, 110, 245, 0.1);
+        }
+
+        .input-wrapper textarea {
+            height: 35px !important;
+            flex: 1;
+            border: none;
+            background: none;
+            font-size: 15px;
+            font-weight: 500;
+            resize: none;
+            padding: 8px 0;
+            line-height: 19px;
+            min-width: 0;
+            letter-spacing: -0.5px;
+            font-family: var(--font-family);
+        }
+
+        .input-wrapper textarea::placeholder {
+            color: #b5bcc2;
+            font-weight: 500;
+            letter-spacing: -0.5px;
+        }
+
+        .input-wrapper textarea:focus {
+            outline: none;
+        }
+
+        .input-actions {
+            display: flex;
+            gap: 1.5px;
+            align-items: center;
+            height: 35px;
+            margin-left: auto;
+            padding-left: 20px;
+        }
+
+        .action-button {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: none;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .action-button .camera-icon {
+            width: 23px;
+            height: 23px;
+            fill: #7f7f7f;
+        }
+
+        .action-button .send-icon {
+            width: 26px;
+            height: 26px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        /* 响应式设计：
+           1. 移动端 (≤511px): 全屏显示，无阴影
+           2. 平板端 (512px-1023px): 保持511x700px固定尺寸
+           3. 桌面端 (≥1024px): 保持原尺寸，最大宽度1000px
+        */
+
+        /* 移动端全屏 */
+        @media screen and (max-width: 511px) {
+            body {
+                background-color: white;
+                position: fixed;
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                touch-action: none;
+            }
+
+            .chat-wrapper {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                width: 100%;
+                height: 100%;
+            }
+
             .chat-page {
-                max-width: 1000px;
-                margin: 0 auto;
-                height: 100vh;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                position: relative;
+                position: absolute;
+                width: 100%;
+                height: 100%;
+            }
+
+            .chat-container {
+                height: 100%;
+            }
+
+            .chat-header {
+                padding-top: max(12px, var(--safe-area-inset-top));
             }
 
             .chat-input {
-                position: absolute;
-                width: 100%;
+                padding-bottom: max(12px, var(--safe-area-inset-bottom));
             }
+
+            /* 移动端管理员模式 */
+            body.admin-mode .chat-wrapper {
+                width: 100%;
+                flex-direction: column;
+            }
+
+            .chat-messages {
+                flex: 1;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* 移动端快捷回复区域 */
+            .quick-reply-section {
+                width: 100%;
+                height: auto;
+                min-height: 200px;
+                max-height: 40vh;
+                border-bottom: 1px solid #e0e0e0;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            }
+
+            .quick-reply-section::after {
+                display: none;
+            }
+        }
+
+        /* 平板端固定尺寸 */
+        @media screen and (min-width: 512px) and (max-width: 1023px) {
+            .chat-wrapper {
+                width: min(var(--chat-width), 95vw);
+                height: min(var(--chat-height), 95vh);
+            }
+
+            body.admin-mode .chat-wrapper {
+                width: min(calc(var(--chat-width) * 1.25), 95vw);
+            }
+
+            .quick-reply-section {
+                min-width: 200px;
+                width: 25%;
+            }
+        }
+
+        /* 桌面端 */
+        @media (min-width: 1024px) {
+            body {
+                background: #f0f0f0;
+                padding: 0;
+            }
+
+            .chat-wrapper {
+                width: var(--chat-width);
+                height: min(var(--chat-height), 90vh);
+                max-height: 900px;
+                margin: auto;
+                background: white;
+                overflow: hidden;
+            }
+
+            body.admin-mode .chat-wrapper {
+                width: calc(var(--chat-width) + var(--quick-reply-width));
+            }
+
+            .chat-page {
+                width: var(--chat-width);
+                height: 100%;
+                flex: 1;
+                display: block;
+                opacity: 1;
+            }
+
+            .chat-header {
+                padding: 12px 20px;
+                border-bottom: 1px solid #F6F6F6;
+            }
+
+            .chat-header h2 {
+                font-size: 18px;
+                font-weight: 500;
+            }
+
+            .chat-messages {
+                padding: 10px;
+                border-top: 1px solid #F6F6F6;
+                border-bottom: 1px solid #F6F6F6;
+            }
+
+            .quick-reply-section {
+                width: var(--quick-reply-width);
+                min-width: var(--quick-reply-width);
+                height: 100%;
+                padding: 15px;
+                border-right: 1px solid #e0e0e0;
+                background: white;
+            }
+
+            .quick-reply-header {
+                margin-bottom: 15px;
+            }
+
+            .quick-reply-header button {
+                padding: 8px;
+                font-size: 14px;
+                font-weight: 500;
+                border-radius: 4px;
+            }
+
+            .quick-reply-item {
+                margin-bottom: 10px;
+                background: #f8f9fa;
+                border: 1px solid transparent;
+                border-radius: 8px;
+            }
+
+            .quick-reply-item:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            }
+
+            .input-wrapper {
+                max-width: 90%;
+                background: #fafafa;
+            }
+
+            .input-wrapper:focus-within {
+                background: white;
+                box-shadow: 0 0 0 2px rgba(76, 110, 245, 0.1);
+            }
+
+            /* 响应式调整 */
+            @media (max-height: 900px) {
+                :root {
+                    --chat-height: 90vh;
+                }
+                .chat-wrapper {
+                    height: 90vh;
+                }
+            }
+
+            @media (max-width: 1400px) {
+                :root {
+                    --chat-width: 560px;
+                    --quick-reply-width: 260px;
+                }
+            }
+
+            @media (max-width: 1200px) {
+                :root {
+                    --chat-width: 520px;
+                    --quick-reply-width: 240px;
+                }
+            }
+
+            @media (max-width: 1000px) {
+                :root {
+                    --chat-width: 480px;
+                    --quick-reply-width: 220px;
+                }
+            }
+        }
+
+        /* 移除重复的安全区域支持 */
+        @supports (padding: env(safe-area-inset-top)) {
+            @media screen and (max-width: 511px) {
+                .chat-page {
+                    padding-top: env(safe-area-inset-top);
+                    padding-bottom: env(safe-area-inset-bottom);
+                }
+            }
+        }
+
+        /* 图片消息和模态框样式 */
+        .message-content img {
+            max-width: 280px;
+            max-height: 200px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .message-content img:hover {
+            transform: scale(1.02);
+        }
+
+        /* 移动端图片样式调整 */
+        @media screen and (max-width: 511px) {
+            .message-content img {
+                max-width: 240px;
+                max-height: 180px;
+            }
+        }
+
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .image-modal.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .image-modal img {
+            max-width: 90%;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 快捷回复添加模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 400px;
+        }
+
+        .modal-content h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+
+        .modal-content textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .modal-buttons button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .modal-buttons button:hover {
+            background: #0056b3;
+        }
+
+        .cancel-btn {
+            background: #6c757d;
+        }
+
+        .cancel-btn:hover {
+            background: #5a6268;
+        }
+
+        /* 在线人数显示 */
+        .online-count {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 1000;
+            transition: opacity 0.3s;
+        }
+
+        /* 快捷回复删除模式样式 */
+        .quick-reply-section.delete-mode .quick-reply-item {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+
+        .quick-reply-section.delete-mode .quick-reply-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        .quick-reply-section.delete-mode .quick-reply-item.selected {
+            border-color: #ff4d4f;
+            background-color: #fff1f0;
+        }
+
+        .quick-reply-section.delete-mode .quick-reply-item.selected:hover {
+            background-color: #ffccc7;
+        }
+
+        #deleteQuickReply.confirm-delete {
+            background-color: #ff4d4f;
+            color: white;
+        }
+
+        #deleteQuickReply.confirm-delete:hover {
+            background-color: #ff7875;
+        }
+
+        #addQuickReply.cancel-delete {
+            background-color: #d9d9d9;
+            color: rgba(0, 0, 0, 0.85);
+        }
+
+        #addQuickReply.cancel-delete:hover {
+            background-color: #f0f0f0;
         }
     </style>
 </head>
@@ -67,9 +829,10 @@
     <!-- 加载页面 -->
     <iframe id="loadingPage" src="/loading.html" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; border: none; z-index: 9999; background: white; transition: opacity 0.3s ease;"></iframe>
 
-    <div class="chat-page">
-        <!-- 快捷回复区域 (管理员专用) -->
-        <div id="quickReplySection" class="quick-reply-section hidden">
+    <!-- 聊天界面包装器 -->
+    <div class="chat-wrapper">
+        <!-- 快捷回复区域 -->
+        <div id="quickReplySection" class="quick-reply-section">
             <div class="quick-reply-header">
                 <button id="addQuickReply">추가</button>
                 <button id="deleteQuickReply">삭제</button>
@@ -79,21 +842,33 @@
             </div>
         </div>
 
-        <!-- 聊天区域 -->
-        <div class="chat-container">
-            <div class="chat-header">
-                <h2 id="roomName"></h2>
-            </div>
-            <div class="chat-messages" id="messageContainer">
-                <!-- 消息列表 -->
-            </div>
-            <div class="chat-input">
-                <input type="file" id="imageInput" accept="image/*" style="display: none;">
-                <button id="uploadImageBtn" style="flex-shrink: 0; padding: 8px; background: none; border: 1px solid #DEE2E6;">
-                    <img src="/images/image-icon.svg" alt="이미지 업로드" width="24" style="opacity: 0.6;">
-                </button>
-                <input type="text" id="messageInput" placeholder="메시지를 입력하세요." maxlength="1000" style="flex: 1; min-width: 0;">
-                <button id="sendButton" style="flex-shrink: 0; width: 80px;">전송</button>
+        <!-- 聊天主界面 -->
+        <div class="chat-page">
+            <div class="chat-container">
+                <div class="chat-header">
+                    <h2 id="roomName">채팅방</h2>
+                </div>
+                <div class="chat-messages" id="messageContainer">
+                    <!-- 消息内容会由 JavaScript 动态添加 -->
+                </div>
+                <div class="chat-input">
+                    <div class="input-wrapper">
+                        <textarea id="messageInput" placeholder="메시지를 입력하세요."></textarea>
+                        <div class="input-actions">
+                            <button class="action-button" id="uploadImageBtn">
+                                <svg class="camera-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                    <path d="M12.897.55c.336 0 .643.187.799.484l1.057 2.035H18.1a.9.9 0 0 1 .9.9V18.1a.9.9 0 0 1-.9.9H1.9a.9.9 0 0 1-.9-.9V3.97a.9.9 0 0 1 .9-.9h3.347l1.058-2.036A.902.902 0 0 1 7.104.55h5.793zm-.546 1.8H7.65L6.592 4.385a.9.9 0 0 1-.8.484h-2.99V17.2H17.2V4.87h-2.993a.903.903 0 0 1-.8-.485L12.352 2.35zM10 6.595a4.03 4.03 0 0 1 4.025 4.026A4.03 4.03 0 0 1 10 14.646a4.03 4.03 0 0 1-4.025-4.025A4.03 4.03 0 0 1 10 6.595zm0 1.8a2.228 2.228 0 0 0-2.225 2.226c0 1.227.998 2.226 2.225 2.226a2.227 2.227 0 0 0 2.225-2.226A2.228 2.228 0 0 0 10 8.395z"/>
+                                </svg>
+                            </button>
+                            <button class="action-button" id="sendButton">
+                                <svg class="send-icon" width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M16.804 12.132a1.093 1.093 0 0 1-1.544.002l-2.17-2.162v6.696a1.093 1.093 0 1 1-2.183 0V9.974l-2.166 2.16A1.093 1.093 0 0 1 7.2 10.588l3.95-3.938c.111-.137.254-.247.423-.316.404-.17.874-.089 1.188.223l4.041 4.03c.427.426.428 1.117.003 1.545M20.49 3.51C15.808-1.17 8.192-1.17 3.51 3.51c-4.68 4.68-4.68 12.297 0 16.98A11.977 11.977 0 0 0 12 24c3.074 0 6.148-1.17 8.49-3.51 4.68-4.682 4.68-12.298 0-16.98" fill="#D80C18" fill-rule="evenodd"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <input type="file" id="imageInput" class="file-input" accept="image/*" style="display: none;">
+                </div>
             </div>
         </div>
     </div>
@@ -104,19 +879,19 @@
     </div>
 
     <!-- 快捷回复添加模态框 -->
-    <div id="addQuickReplyModal" class="modal hidden">
+    <div id="addQuickReplyModal" class="modal">
         <div class="modal-content">
             <h3>빠른 답장 추가</h3>
             <textarea id="quickReplyContent" placeholder="빠른 답장 내용을 입력하세요"></textarea>
             <div class="modal-buttons">
                 <button id="saveQuickReply">저장</button>
-                <button id="cancelQuickReply">취소</button>
+                <button id="cancelQuickReply" class="cancel-btn">취소</button>
             </div>
         </div>
     </div>
 
     <!-- 快捷回复删除模态框 -->
-    <div id="deleteQuickReplyModal" class="modal hidden">
+    <div id="deleteQuickReplyModal" class="modal">
         <div class="modal-content">
             <h3>삭제할 빠른 답장 선택</h3>
             <div class="quick-reply-delete-list"></div>
@@ -130,11 +905,23 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="/js/chat.js"></script>
     <script>
-        window.addEventListener("resize", function() {
+        // 合并 resize 相关的函数
+        function updateViewportHeight() {
+            let vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
             document.body.style.height = window.innerHeight + "px";
-        });
-        // 初始设置
-        document.body.style.height = window.innerHeight + "px";
+        }
+
+        window.addEventListener('resize', updateViewportHeight);
+        window.addEventListener('orientationchange', updateViewportHeight);
+        updateViewportHeight();
+
+        // 防止移动端橡皮筋效果
+        document.body.addEventListener('touchmove', function(e) {
+            if (!e.target.closest('.chat-messages')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
     </script>
 </body>
 </html> 

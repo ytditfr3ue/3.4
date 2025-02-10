@@ -61,6 +61,9 @@ const quickReplyDeleteList = document.querySelector('.quick-reply-delete-list');
 let socket = null;
 let isConnected = false;
 let currentReplies = [];
+let onlineCount = 0;
+let isDeleteMode = false;
+let selectedReplies = new Set();
 
 // 初始显示加载页面（仅用户）
 if (!isAdmin) {
@@ -73,6 +76,11 @@ async function init() {
         // 确保聊天页面初始隐藏
         chatPage.style.display = 'none';
         chatPage.style.opacity = '0';
+
+        // 设置管理员模式
+        if (isAdmin) {
+            document.body.classList.add('admin-mode');
+        }
 
         if (!isAdmin) {
             // 用户显示加载页面
@@ -104,14 +112,22 @@ async function init() {
         // 连接Socket
         connectSocket();
 
-        // 如果是管理员，显示快捷回复区域
+        // 如果是管理员，加载快捷回复
         if (isAdmin) {
-            quickReplySection.classList.remove('hidden');
             await loadQuickReplies();
         }
 
         // 设置事件监听
         setupEventListeners();
+
+        // 添加在线人数显示元素
+        if (isAdmin) {
+            const onlineCountElement = document.createElement('div');
+            onlineCountElement.className = 'online-count';
+            onlineCountElement.id = 'onlineCount';
+            onlineCountElement.textContent = '현재 접속자 수: 0명';
+            document.body.appendChild(onlineCountElement);
+        }
 
     } catch (error) {
         console.error('초기화 실패:', error);
@@ -142,15 +158,23 @@ function connectSocket() {
         window.location.href = 'https://www.naver.com';
     });
 
-    socket.on('userJoined', ({ onlineCount }) => {
+    socket.on('userJoined', ({ onlineCount: count }) => {
+        onlineCount = count;
         if (isAdmin) {
-            showNotification(`현재 접속자 수: ${onlineCount}명`);
+            const onlineCountElement = document.getElementById('onlineCount');
+            if (onlineCountElement) {
+                onlineCountElement.textContent = `현재 접속자 수: ${count}명`;
+            }
         }
     });
 
-    socket.on('userLeft', ({ onlineCount }) => {
+    socket.on('userLeft', ({ onlineCount: count }) => {
+        onlineCount = count;
         if (isAdmin) {
-            showNotification(`현재 접속자 수: ${onlineCount}명`);
+            const onlineCountElement = document.getElementById('onlineCount');
+            if (onlineCountElement) {
+                onlineCountElement.textContent = `현재 접속자 수: ${count}명`;
+            }
         }
     });
 
@@ -215,25 +239,78 @@ function setupQuickReplyEvents() {
     if (!isAdmin) return;
 
     addQuickReplyBtn.addEventListener('click', () => {
-        addQuickReplyModal.classList.remove('hidden');
+        if (isDeleteMode) {
+            exitDeleteMode();
+            return;
+        }
+        addQuickReplyModal.style.display = 'flex';
     });
 
     cancelQuickReplyBtn.addEventListener('click', () => {
-        addQuickReplyModal.classList.add('hidden');
+        addQuickReplyModal.style.display = 'none';
         quickReplyContent.value = '';
     });
 
     document.getElementById('cancelDeleteQuickReply').addEventListener('click', () => {
-        document.getElementById('deleteQuickReplyModal').classList.add('hidden');
+        deleteQuickReplyModal.style.display = 'none';
     });
 
     saveQuickReplyBtn.addEventListener('click', saveQuickReply);
 
-    deleteQuickReplyBtn.addEventListener('click', showDeleteQuickReplyModal);
+    deleteQuickReplyBtn.addEventListener('click', async () => {
+        if (!isDeleteMode) {
+            showDeleteQuickReplyModal();
+            return;
+        }
 
-    document.getElementById('confirmDeleteQuickReply').addEventListener('click', handleDeleteQuickReply);
+        if (selectedReplies.size === 0) {
+            showNotification('삭제할 항목을 선택해주세요', 'error');
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('token');
+            const deletePromises = Array.from(selectedReplies).map(replyId =>
+                fetch(`/api/chat/quick-replies/${replyId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+            );
+
+            const results = await Promise.all(deletePromises);
+            const allSuccessful = results.every(response => response.ok);
+
+            if (allSuccessful) {
+                showNotification('선택한 항목이 삭제되었습니다');
+                await loadQuickReplies();
+            } else {
+                showNotification('일부 항목 삭제 실패', 'error');
+            }
+        } catch (error) {
+            console.error('Failed to delete quick replies:', error);
+            showNotification('삭제 실패', 'error');
+        } finally {
+            exitDeleteMode();
+        }
+    });
 
     quickReplyList.addEventListener('click', handleQuickReplyClick);
+
+    // 添加模态框背景点击关闭事件
+    addQuickReplyModal.addEventListener('click', (e) => {
+        if (e.target === addQuickReplyModal) {
+            addQuickReplyModal.style.display = 'none';
+            quickReplyContent.value = '';
+        }
+    });
+
+    deleteQuickReplyModal.addEventListener('click', (e) => {
+        if (e.target === deleteQuickReplyModal) {
+            deleteQuickReplyModal.style.display = 'none';
+        }
+    });
 }
 
 // 加载快捷回复
@@ -268,56 +345,55 @@ function renderQuickReplies(replies) {
 
 // 显示删除快捷回复模态框
 function showDeleteQuickReplyModal() {
-    quickReplyDeleteList.innerHTML = currentReplies.map(reply => `
-        <div class="quick-reply-delete-item">
-            <input type="checkbox" name="deleteReply" value="${reply._id}" id="reply_${reply._id}">
-            <label for="reply_${reply._id}">${reply.content}</label>
-        </div>
-    `).join('');
-    deleteQuickReplyModal.classList.remove('hidden');
+    const quickReplySection = document.getElementById('quickReplySection');
+    const deleteBtn = document.getElementById('deleteQuickReply');
+    const addBtn = document.getElementById('addQuickReply');
+    
+    isDeleteMode = true;
+    selectedReplies.clear();
+    
+    quickReplySection.classList.add('delete-mode');
+    deleteBtn.textContent = '확인';
+    deleteBtn.classList.add('confirm-delete');
+    addBtn.textContent = '취소';
+    addBtn.classList.add('cancel-delete');
 }
 
-// 处理删除快捷回复
-async function handleDeleteQuickReply() {
-    const selectedReplies = Array.from(document.querySelectorAll('input[name="deleteReply"]:checked'))
-        .map(input => input.value);
-
-    if (selectedReplies.length === 0) {
-        showNotification('삭제할 항목을 선택해주세요', 'error');
-        return;
-    }
-
-    try {
-        const token = localStorage.getItem('token');
-        const deletePromises = selectedReplies.map(replyId => 
-            fetch(`/api/chat/quick-replies/${replyId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            })
-        );
-
-        const results = await Promise.all(deletePromises);
-        const allSuccessful = results.every(response => response.ok);
-
-        if (allSuccessful) {
-            showNotification('선택한 항목이 삭제되었습니다');
-            deleteQuickReplyModal.classList.add('hidden');
-            await loadQuickReplies();
-        } else {
-            showNotification('일부 항목 삭제 실패', 'error');
-        }
-    } catch (error) {
-        console.error('Failed to delete quick replies:', error);
-        showNotification('삭제 실패', 'error');
-    }
+function exitDeleteMode() {
+    const quickReplySection = document.getElementById('quickReplySection');
+    const deleteBtn = document.getElementById('deleteQuickReply');
+    const addBtn = document.getElementById('addQuickReply');
+    
+    isDeleteMode = false;
+    selectedReplies.clear();
+    
+    quickReplySection.classList.remove('delete-mode');
+    deleteBtn.textContent = '삭제';
+    deleteBtn.classList.remove('confirm-delete');
+    addBtn.textContent = '추가';
+    addBtn.classList.remove('cancel-delete');
+    
+    // 移除所有选中状态
+    document.querySelectorAll('.quick-reply-item.selected').forEach(item => {
+        item.classList.remove('selected');
+    });
 }
 
 // 处理快捷回复点击
 function handleQuickReplyClick(e) {
     const item = e.target.closest('.quick-reply-item');
     if (!item) return;
+
+    if (isDeleteMode) {
+        item.classList.toggle('selected');
+        const replyId = item.dataset.id;
+        if (item.classList.contains('selected')) {
+            selectedReplies.add(replyId);
+        } else {
+            selectedReplies.delete(replyId);
+        }
+        return;
+    }
 
     const content = item.dataset.content;
     if (content && isConnected) {
@@ -351,7 +427,7 @@ async function saveQuickReply() {
 
         if (response.ok) {
             await loadQuickReplies();
-            addQuickReplyModal.classList.add('hidden');
+            addQuickReplyModal.style.display = 'none';
             quickReplyContent.value = '';
             showNotification('빠른 답장이 저장되었습니다');
         } else {
@@ -553,11 +629,14 @@ function hideLoadingPage() {
 
 // 显示聊天页面
 function showChatPage() {
-    chatPage.style.display = 'flex';
-    // 使用 setTimeout 确保 display 变更后再改变 opacity
+    loadingPage.style.opacity = '0';
     setTimeout(() => {
-        chatPage.style.opacity = '1';
-    }, 50);
+        loadingPage.style.display = 'none';
+        chatPage.style.display = 'block';
+        setTimeout(() => {
+            chatPage.style.opacity = '1';
+        }, 50);
+    }, 300);
 }
 
 // 初始化

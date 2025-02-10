@@ -576,4 +576,3 @@ securityLogsModal.addEventListener('click', (e) => {
 
 // 初始化
 checkAuth(); 
-checkAuth(); 
