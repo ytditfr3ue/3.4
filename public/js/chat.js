@@ -535,8 +535,27 @@ async function updateQuickReply() {
 
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`/api/chat/quick-replies/${currentEditingReplyId}`, {
-            method: 'PUT',
+        if (!token) {
+            showNotification('인증이 필요합니다', 'error');
+            return;
+        }
+
+        // 1. 先删除旧的记录
+        const deleteResponse = await fetch(`/api/chat/quick-replies/${currentEditingReplyId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!deleteResponse.ok) {
+            showNotification('수정 실패', 'error');
+            return;
+        }
+
+        // 2. 创建新记录
+        const createResponse = await fetch('/api/chat/quick-replies', {
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
@@ -544,12 +563,12 @@ async function updateQuickReply() {
             body: JSON.stringify({ content })
         });
 
-        if (response.ok) {
+        if (createResponse.ok) {
             await loadQuickReplies();
             closeEditModal();
             showNotification('수정되었습니다');
         } else {
-            const data = await response.json();
+            const data = await createResponse.json();
             showNotification(data.message || '수정 실패', 'error');
         }
     } catch (error) {
