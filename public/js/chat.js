@@ -47,29 +47,24 @@ const imageInput = document.getElementById('imageInput');
 const roomNameElement = document.getElementById('roomName');
 const imageModal = document.getElementById('imageModal');
 const modalImage = document.getElementById('modalImage');
-const quickReplyList = document.querySelector('.quick-reply-list');
-const rightQuickReplyList = document.querySelector('.quick-reply-list.right-replies');
+const quickReplySection = document.getElementById('quickReplySection');
+const quickReplyList = document.getElementById('quickReplyList');
+const addQuickReplyBtn = document.getElementById('addQuickReply');
+const deleteQuickReplyBtn = document.getElementById('deleteQuickReply');
 const addQuickReplyModal = document.getElementById('addQuickReplyModal');
 const quickReplyContent = document.getElementById('quickReplyContent');
 const saveQuickReplyBtn = document.getElementById('saveQuickReply');
 const cancelQuickReplyBtn = document.getElementById('cancelQuickReply');
-const deleteQuickReplyBtn = document.getElementById('deleteQuickReply');
-const addQuickReplyBtn = document.getElementById('addQuickReply');
-const editQuickReplyModal = document.getElementById('editQuickReplyModal');
-const editQuickReplyContent = document.getElementById('editQuickReplyContent');
-const saveEditQuickReplyBtn = document.getElementById('saveEditQuickReply');
-const cancelEditQuickReplyBtn = document.getElementById('cancelEditQuickReply');
+const deleteQuickReplyModal = document.getElementById('deleteQuickReplyModal');
+const quickReplyDeleteList = document.querySelector('.quick-reply-delete-list');
+let currentEditingReplyId = null;
 
 let socket = null;
 let isConnected = false;
-let leftReplies = [];
-let rightReplies = [];
+let currentReplies = [];
 let onlineCount = 0;
 let isDeleteMode = false;
 let selectedReplies = new Set();
-let currentEditingSide = null;
-let currentEditingReply = null;
-let currentReplies = [];
 
 // 初始显示加载页面（仅用户）
 if (!isAdmin) {
@@ -80,17 +75,14 @@ if (!isAdmin) {
 async function init() {
     try {
         // 确保聊天页面初始隐藏
-        chatPage.style.display = 'none';
-        chatPage.style.opacity = '0';
+        const chatPage = document.getElementById('chatPage');
+        if (chatPage) {
+            chatPage.style.display = 'none';
+            chatPage.style.opacity = '0';
+        }
 
-        // 验证管理员身份
+        // 设置管理员模式
         if (isAdmin) {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                showNotification('관리자 인증이 필요합니다', 'error');
-                window.location.href = '/';
-                return;
-            }
             document.body.classList.add('admin-mode');
         }
 
@@ -99,7 +91,10 @@ async function init() {
             showLoadingPage();
         } else {
             // 管理员直接显示聊天页面
-            loadingPage.style.display = 'none';
+            const loadingPage = document.getElementById('loadingPage');
+            if (loadingPage) {
+                loadingPage.style.display = 'none';
+            }
             showChatPage();
         }
 
@@ -116,7 +111,9 @@ async function init() {
         }
 
         // 设置聊天室名称
-        roomNameElement.textContent = room.name;
+        if (roomNameElement) {
+            roomNameElement.textContent = room.name;
+        }
 
         // 加载历史消息
         await loadMessages();
@@ -126,8 +123,12 @@ async function init() {
 
         // 如果是管理员，加载快捷回复
         if (isAdmin) {
-            await loadQuickReplies();
-            setupQuickReplyEvents();
+            try {
+                await loadQuickReplies();
+            } catch (error) {
+                console.error('Failed to load quick replies:', error);
+                showNotification('빠른 답장을 로드하지 못했습니다', 'error');
+            }
         }
 
         // 设置事件监听
@@ -144,10 +145,7 @@ async function init() {
 
     } catch (error) {
         console.error('초기화 실패:', error);
-        showNotification('채팅방을 불러올 수 없습니다', 'error');
-        setTimeout(() => {
-            window.location.href = '/';
-        }, 2000);
+        showNotification('초기화에 실패했습니다', 'error');
     }
 }
 
@@ -247,17 +245,105 @@ function setupEventListeners() {
     setupQuickReplyEvents();
 }
 
+// 退出删除模式
+function exitDeleteMode() {
+    const quickReplySection = document.querySelector('.quick-reply-section.left');
+    const deleteBtn = quickReplySection?.querySelector('button:last-child');
+    const addBtn = quickReplySection?.querySelector('button:first-child');
+    
+    if (!quickReplySection || !deleteBtn || !addBtn) {
+        console.error('Exit delete mode elements not found');
+        return;
+    }
+    
+    isDeleteMode = false;
+    selectedReplies.clear();
+    
+    quickReplySection.classList.remove('delete-mode');
+    deleteBtn.textContent = '편집';
+    deleteBtn.classList.remove('confirm-delete');
+    addBtn.textContent = '추가';
+    addBtn.classList.remove('cancel-delete');
+    
+    // 移除所有选中状态
+    quickReplySection.querySelectorAll('.quick-reply-item.selected').forEach(item => {
+        item.classList.remove('selected');
+    });
+}
+
+// 进入删除模式
+function enterDeleteMode() {
+    const quickReplySection = document.querySelector('.quick-reply-section.left');
+    const deleteBtn = quickReplySection?.querySelector('button:last-child');
+    const addBtn = quickReplySection?.querySelector('button:first-child');
+    
+    if (!quickReplySection || !deleteBtn || !addBtn) {
+        console.error('Delete mode elements not found');
+        return;
+    }
+    
+    isDeleteMode = true;
+    selectedReplies.clear();
+    
+    quickReplySection.classList.add('delete-mode');
+    deleteBtn.textContent = '확인';
+    deleteBtn.classList.add('confirm-delete');
+    addBtn.textContent = '취소';
+    addBtn.classList.add('cancel-delete');
+}
+
+// 删除选中的快捷回复
+async function deleteSelectedReplies() {
+    if (selectedReplies.size === 0) {
+        showNotification('삭제할 항목을 선택하세요', 'error');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        const deletePromises = Array.from(selectedReplies).map(replyId =>
+            fetch(`/api/chat/quick-replies/${replyId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+        );
+
+        const results = await Promise.all(deletePromises);
+        const allSuccessful = results.every(response => response.ok);
+
+        if (allSuccessful) {
+            showNotification('삭제되었습니다');
+            await loadQuickReplies();
+        } else {
+            showNotification('일부 항목을 삭제하지 못했습니다', 'error');
+        }
+    } catch (error) {
+        console.error('Failed to delete quick replies:', error);
+        showNotification('삭제 실패', 'error');
+    } finally {
+        exitDeleteMode();
+    }
+}
+
 // 设置快捷回复相关事件监听
 function setupQuickReplyEvents() {
     if (!isAdmin) return;
 
+    // 只获取左侧的按钮和列表
     const quickReplySection = document.querySelector('.quick-reply-section.left');
     const addQuickReplyBtn = quickReplySection?.querySelector('button:first-child');
     const editQuickReplyBtn = quickReplySection?.querySelector('button:last-child');
     const quickReplyList = quickReplySection?.querySelector('.quick-reply-list');
     
-    // 添加按钮事件
-    addQuickReplyBtn?.addEventListener('click', () => {
+    if (!quickReplySection || !addQuickReplyBtn || !editQuickReplyBtn || !quickReplyList) {
+        console.error('Left quick reply elements not found');
+        return;
+    }
+
+    // 添加按钮事件监听
+    addQuickReplyBtn.addEventListener('click', () => {
         if (isDeleteMode) {
             exitDeleteMode();
             return;
@@ -268,8 +354,8 @@ function setupQuickReplyEvents() {
         }
     });
 
-    // 编辑按钮事件
-    editQuickReplyBtn?.addEventListener('click', () => {
+    // 编辑按钮事件监听
+    editQuickReplyBtn.addEventListener('click', () => {
         if (!isDeleteMode) {
             enterDeleteMode();
         } else {
@@ -278,90 +364,60 @@ function setupQuickReplyEvents() {
     });
 
     // 快速回复列表点击事件
-    quickReplyList?.addEventListener('click', handleQuickReplyClick);
-}
+    quickReplyList.addEventListener('click', handleQuickReplyClick);
 
-// 处理快捷回复点击
-function handleQuickReplyClick(e) {
-    const replyItem = e.target.closest('.quick-reply-item');
-    if (!replyItem) return;
-
-    if (isDeleteMode) {
-        replyItem.classList.toggle('selected');
-    } else {
-        const content = replyItem.dataset.content;
-        if (content && isConnected) {
-            socket.emit('message', {
-                content,
-                type: 'text'
-            });
-        }
-    }
-}
-
-// 进入删除模式
-function enterDeleteMode() {
-    isDeleteMode = true;
-    const editBtn = document.querySelector('.quick-reply-section.left button:last-child');
-    if (editBtn) {
-        editBtn.textContent = '确认';
-        editBtn.style.background = '#dc3545';
-    }
-}
-
-// 退出删除模式
-function exitDeleteMode() {
-    isDeleteMode = false;
-    const editBtn = document.querySelector('.quick-reply-section.left button:last-child');
-    if (editBtn) {
-        editBtn.textContent = '编辑';
-        editBtn.style.background = '#007bff';
-    }
-    document.querySelectorAll('.quick-reply-item.selected').forEach(item => {
-        item.classList.remove('selected');
-    });
-}
-
-// 删除选中的快捷回复
-async function deleteSelectedReplies() {
-    const selectedItems = document.querySelectorAll('.quick-reply-item.selected');
-    if (selectedItems.length === 0) {
-        exitDeleteMode();
-        return;
-    }
-
-    try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            showNotification('인증이 필요합니다', 'error');
-            return;
-        }
-
-        const selectedIds = Array.from(selectedItems).map(item => item.dataset.id);
-        const response = await fetch('/api/chat/quick-replies/batch-delete', {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ ids: selectedIds })
+    // 设置模态框相关事件
+    const addQuickReplyModal = document.getElementById('addQuickReplyModal');
+    const cancelQuickReplyBtn = document.getElementById('cancelQuickReply');
+    const saveQuickReplyBtn = document.getElementById('saveQuickReply');
+    
+    if (addQuickReplyModal) {
+        addQuickReplyModal.addEventListener('click', (e) => {
+            if (e.target === addQuickReplyModal) {
+                addQuickReplyModal.style.display = 'none';
+                const quickReplyContent = document.getElementById('quickReplyContent');
+                if (quickReplyContent) {
+                    quickReplyContent.value = '';
+                }
+            }
         });
+    }
 
-        if (!response.ok) {
-            throw new Error('삭제 실패');
-        }
+    if (cancelQuickReplyBtn) {
+        cancelQuickReplyBtn.addEventListener('click', () => {
+            if (addQuickReplyModal) {
+                addQuickReplyModal.style.display = 'none';
+                const quickReplyContent = document.getElementById('quickReplyContent');
+                if (quickReplyContent) {
+                    quickReplyContent.value = '';
+                }
+            }
+        });
+    }
 
-        // 从当前列表中移除已删除的项目
-        currentReplies = currentReplies.filter(reply => !selectedIds.includes(reply._id));
-        const quickReplyList = document.querySelector('.quick-reply-list.left-replies');
-        renderQuickReplies(currentReplies, quickReplyList);
-        
-        showNotification('삭제되었습니다');
-    } catch (error) {
-        console.error('Failed to delete quick replies:', error);
-        showNotification(error.message || '삭제 실패', 'error');
-    } finally {
-        exitDeleteMode();
+    if (saveQuickReplyBtn) {
+        saveQuickReplyBtn.addEventListener('click', saveQuickReply);
+    }
+
+    // 编辑模态框相关事件监听
+    const editModal = document.getElementById('editQuickReplyModal');
+    const updateQuickReplyBtn = document.getElementById('updateQuickReply');
+    const cancelEditQuickReplyBtn = document.getElementById('cancelEditQuickReply');
+    
+    if (editModal) {
+        editModal.addEventListener('click', (e) => {
+            if (e.target === editModal) {
+                closeEditModal();
+            }
+        });
+    }
+
+    if (updateQuickReplyBtn) {
+        updateQuickReplyBtn.addEventListener('click', updateQuickReply);
+    }
+
+    if (cancelEditQuickReplyBtn) {
+        cancelEditQuickReplyBtn.addEventListener('click', closeEditModal);
     }
 }
 
@@ -376,7 +432,16 @@ async function loadQuickReplies() {
         });
         const replies = await response.json();
         currentReplies = replies;
+        
+        // 只获取左侧快捷回复列表
         const quickReplyList = document.querySelector('.quick-reply-list.left-replies');
+        
+        if (!quickReplyList) {
+            console.error('Left quick reply list not found');
+            return;
+        }
+        
+        // 只渲染左侧快捷回复列表
         renderQuickReplies(replies, quickReplyList);
     } catch (error) {
         console.error('Failed to load quick replies:', error);
@@ -390,24 +455,127 @@ function renderQuickReplies(replies, container) {
         console.error('Quick reply container not found');
         return;
     }
+    
     container.innerHTML = '';
     replies.forEach(reply => {
         const div = document.createElement('div');
         div.className = 'quick-reply-item';
         div.dataset.id = reply._id;
         div.dataset.content = reply.content;
-        div.innerHTML = `<span class="reply-content">${reply.content}</span>`;
+        div.innerHTML = `
+            <span class="reply-content">${reply.content}</span>
+            <svg class="edit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+        `;
         container.appendChild(div);
     });
 }
 
-// 保存新的快捷回复
-async function saveQuickReply() {
-    const content = document.getElementById('quickReplyContent')?.value.trim();
+// 处理快捷回复点击
+function handleQuickReplyClick(e) {
+    const item = e.target.closest('.quick-reply-item');
+    if (!item) return;
+
+    // 如果是删除模式，处理选择逻辑
+    if (isDeleteMode) {
+        item.classList.toggle('selected');
+        const replyId = item.dataset.id;
+        if (item.classList.contains('selected')) {
+            selectedReplies.add(replyId);
+        } else {
+            selectedReplies.delete(replyId);
+        }
+        return;
+    }
+
+    // 如果点击的是编辑图标
+    if (e.target.closest('.edit-icon')) {
+        openEditModal(item.dataset.id, item.dataset.content);
+        return;
+    }
+
+    // 点击内容区域发送消息
+    const content = item.dataset.content;
+    if (content && isConnected) {
+        socket.emit('message', {
+            content,
+            type: 'text'
+        });
+    }
+}
+
+// 打开编辑模态框
+function openEditModal(replyId, content) {
+    const editModal = document.getElementById('editQuickReplyModal');
+    const editContent = document.getElementById('editQuickReplyContent');
+    
+    if (!editModal || !editContent) {
+        console.error('Edit modal elements not found');
+        return;
+    }
+
+    currentEditingReplyId = replyId;
+    editContent.value = content;
+    editModal.style.display = 'flex';
+}
+
+// 更新快捷回复内容
+async function updateQuickReply() {
+    if (!currentEditingReplyId) return;
+
+    const editContent = document.getElementById('editQuickReplyContent');
+    const content = editContent.value.trim();
+    
     if (!content) {
         showNotification('내용을 입력해주세요', 'error');
         return;
     }
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`/api/chat/quick-replies/${currentEditingReplyId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ content })
+        });
+
+        if (response.ok) {
+            await loadQuickReplies();
+            closeEditModal();
+            showNotification('수정되었습니다');
+        } else {
+            const data = await response.json();
+            showNotification(data.message || '수정 실패', 'error');
+        }
+    } catch (error) {
+        console.error('Failed to update quick reply:', error);
+        showNotification('수정 실패', 'error');
+    }
+}
+
+// 关闭编辑模态框
+function closeEditModal() {
+    const editModal = document.getElementById('editQuickReplyModal');
+    const editContent = document.getElementById('editQuickReplyContent');
+    
+    if (editModal) {
+        editModal.style.display = 'none';
+    }
+    if (editContent) {
+        editContent.value = '';
+    }
+    currentEditingReplyId = null;
+}
+
+// 保存快捷回复
+async function saveQuickReply() {
+    const content = quickReplyContent.value.trim();
+    if (!content) return;
 
     try {
         const token = localStorage.getItem('token');
@@ -425,66 +593,62 @@ async function saveQuickReply() {
             body: JSON.stringify({ content })
         });
 
-        if (!response.ok) {
-            throw new Error('저장 실패');
+        if (response.ok) {
+            await loadQuickReplies();
+            addQuickReplyModal.style.display = 'none';
+            quickReplyContent.value = '';
+            showNotification('빠른 답장이 저장되었습니다');
+        } else {
+            const data = await response.json();
+            showNotification(data.message || '저장 실패', 'error');
         }
-
-        const newReply = await response.json();
-        currentReplies.unshift(newReply);
-        const quickReplyList = document.querySelector('.quick-reply-list.left-replies');
-        renderQuickReplies(currentReplies, quickReplyList);
-
-        // 关闭模态框并清空输入
-        const modal = document.getElementById('addQuickReplyModal');
-        if (modal) {
-            modal.style.display = 'none';
-        }
-        const input = document.getElementById('quickReplyContent');
-        if (input) {
-            input.value = '';
-        }
-
-        showNotification('저장되었습니다');
     } catch (error) {
         console.error('Failed to save quick reply:', error);
-        showNotification(error.message || '저장 실패', 'error');
+        showNotification('저장 실패', 'error');
     }
 }
 
-// 设置初始事件监听
-document.addEventListener('DOMContentLoaded', () => {
-    // 设置快捷回复相关事件
-    setupQuickReplyEvents();
+// 发送消息
+function sendMessage() {
+    const content = messageInput.value.trim();
+    if (!content || !isConnected) return;
 
-    // 设置保存按钮事件
-    const saveBtn = document.getElementById('saveQuickReply');
-    saveBtn?.addEventListener('click', saveQuickReply);
-
-    // 设置取消按钮事件
-    const cancelBtn = document.getElementById('cancelQuickReply');
-    cancelBtn?.addEventListener('click', () => {
-        const modal = document.getElementById('addQuickReplyModal');
-        const input = document.getElementById('quickReplyContent');
-        if (modal) {
-            modal.style.display = 'none';
-        }
-        if (input) {
-            input.value = '';
-        }
+    socket.emit('message', {
+        content,
+        type: 'text'
     });
 
-    // 设置模态框点击外部关闭
-    const modal = document.getElementById('addQuickReplyModal');
-    modal?.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.style.display = 'none';
-            const input = document.getElementById('quickReplyContent');
-            if (input) {
-                input.value = '';
-            }
+    messageInput.value = '';
+}
+
+// 上传图片
+async function uploadImage() {
+    const file = imageInput.files[0];
+    if (!file || !isConnected) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+        const response = await fetch('/api/chat/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            socket.emit('message', {
+                content: data.imageUrl,
+                type: 'image'
+            });
         }
-    });
-});
+    } catch (error) {
+        console.error('Upload failed:', error);
+        showNotification('이미지 업로드 실패', 'error');
+    }
+
+    imageInput.value = '';
+}
 
 // 添加消息到界面
 function appendMessage(message) {
@@ -641,116 +805,6 @@ function showChatPage() {
             chatPage.style.opacity = '1';
         }, 50);
     }, 300);
-}
-
-// 显示编辑快捷回复模态框
-function showEditQuickReplyModal(reply) {
-    if (!reply || (!reply._id && !reply.id)) {
-        console.error('Invalid reply object:', reply);
-        return;
-    }
-
-    currentEditingReply = reply;
-    editQuickReplyContent.value = reply.content;
-    
-    // 重置模态框样式
-    const modalContent = editQuickReplyModal.querySelector('.modal-content');
-    modalContent.style.transform = 'scale(1)';
-    modalContent.style.opacity = '1';
-    
-    // 显示模态框
-    editQuickReplyModal.style.display = 'flex';
-    editQuickReplyModal.style.opacity = '1';
-    editQuickReplyContent.focus();
-}
-
-// 关闭编辑模态框
-function closeEditModal() {
-    const modalContent = editQuickReplyModal.querySelector('.modal-content');
-    modalContent.style.transform = 'scale(0.95)';
-    editQuickReplyModal.style.opacity = '0';
-    
-    setTimeout(() => {
-        editQuickReplyModal.style.display = 'none';
-        currentEditingReply = null;
-        editQuickReplyContent.value = '';
-    }, 200);
-}
-
-// 设置模态框事件监听
-document.addEventListener('DOMContentLoaded', () => {
-    // 点击模态框外部关闭
-    editQuickReplyModal.addEventListener('click', (e) => {
-        if (e.target === editQuickReplyModal) {
-            closeEditModal();
-        }
-    });
-
-    // 取消按钮关闭
-    const cancelEditBtn = document.getElementById('cancelEditQuickReply');
-    if (cancelEditBtn) {
-        cancelEditBtn.addEventListener('click', closeEditModal);
-    }
-
-    // 保存按钮事件
-    const saveEditBtn = document.getElementById('saveEditQuickReply');
-    if (saveEditBtn) {
-        saveEditBtn.addEventListener('click', async () => {
-            await saveEditQuickReply();
-            closeEditModal();
-        });
-    }
-});
-
-// 保存编辑后的快捷回复
-async function saveEditQuickReply() {
-    if (!currentEditingReply || (!currentEditingReply._id && !currentEditingReply.id)) {
-        showNotification('编辑失败：无效的快捷回复', 'error');
-        return;
-    }
-    
-    const content = editQuickReplyContent.value.trim();
-    if (!content) {
-        showNotification('내용을 입력해주세요', 'error');
-        return;
-    }
-    
-    try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            showNotification('인증이 필요합니다', 'error');
-            return;
-        }
-
-        const replyId = currentEditingReply._id || currentEditingReply.id;
-        const response = await fetch(`/api/chat/quick-replies/${replyId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ content })
-        });
-        
-        if (!response.ok) {
-            throw new Error('수정 실패');
-        }
-        
-        const updatedReply = await response.json();
-        
-        // 更新本地数据
-        const index = currentReplies.findIndex(reply => (reply._id || reply.id) === replyId);
-        if (index !== -1) {
-            currentReplies[index] = updatedReply;
-            const quickReplyList = document.querySelector('.quick-reply-list.left-replies');
-            renderQuickReplies(currentReplies, quickReplyList);
-        }
-        
-        showNotification('수정되었습니다');
-    } catch (error) {
-        console.error('빠른 답장 수정 실패:', error);
-        showNotification('수정 실패', 'error');
-    }
 }
 
 // 初始化

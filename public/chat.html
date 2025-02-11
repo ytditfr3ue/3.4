@@ -139,8 +139,6 @@
             flex-direction: column;
             padding: 15px;
             position: relative;
-            background: #f8f9fa;
-            border-right: 1px solid #e0e0e0;
         }
 
         /* 管理员模式下显示快捷回复区 */
@@ -148,151 +146,94 @@
             display: flex;
         }
 
+        .quick-reply-section::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 1px;
+            height: 100%;
+            background: linear-gradient(to bottom, 
+                rgba(224, 224, 224, 0) 0%,
+                rgba(224, 224, 224, 1) 10%,
+                rgba(224, 224, 224, 1) 90%,
+                rgba(224, 224, 224, 0) 100%
+            );
+        }
+
         .quick-reply-header {
             display: flex;
             gap: 10px;
             margin-bottom: 15px;
-            padding: 0 5px;
         }
 
         .quick-reply-header button {
             flex: 1;
-            padding: 10px;
+            padding: 8px;
             border: none;
-            border-radius: 6px;
-            background: #1890ff;
+            border-radius: 4px;
+            background: #007bff;
             color: white;
             cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 14px;
-            font-weight: 500;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: background 0.2s;
         }
 
         .quick-reply-header button:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background: #0056b3;
         }
 
         .quick-reply-list {
             flex: 1;
             overflow-y: auto;
-            padding: 5px;
-        }
-
-        .quick-reply-list::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .quick-reply-list::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 3px;
-        }
-
-        .quick-reply-list::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 3px;
-        }
-
-        .quick-reply-list::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
         }
 
         .quick-reply-item {
+            width: 224.1px;
+            height: 45px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            position: relative;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-            position: relative;
-            padding-right: 40px;
-            min-height: 45px;
+        }
+
+        .quick-reply-item:hover {
+            background: #fff;
+            border-color: #e9ecef;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
         .quick-reply-item .reply-content {
-            flex: 1;
+            display: block;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            font-size: 14px;
-            color: #333;
-            padding-right: 8px;
+            flex: 1;
         }
 
-        .quick-reply-item .edit-button {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%) scale(0.9);
-            padding: 6px;
-            width: 28px;
-            height: 28px;
-            border: none;
-            border-radius: 50%;
-            background: #1890ff;
-            color: white;
-            cursor: pointer;
+        /* 编辑图标样式 */
+        .quick-reply-item .edit-icon {
+            width: 16px;
+            height: 16px;
             opacity: 0;
-            visibility: hidden;
-            transition: all 0.2s ease-in-out;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            transition: opacity 0.2s ease;
+            cursor: pointer;
+            margin-left: 8px;
+            color: #666;
         }
 
-        .quick-reply-item:hover .edit-button {
+        .quick-reply-item:hover .edit-icon {
             opacity: 1;
-            visibility: visible;
-            transform: translateY(-50%) scale(1);
         }
 
-        .quick-reply-item .edit-button:hover {
-            background: #40a9ff;
-            transform: translateY(-50%) scale(1.1);
-        }
-
-        .quick-reply-item .edit-button svg {
-            width: 14px;
-            height: 14px;
-            fill: currentColor;
-        }
-
-        /* 删除模式样式优化 */
-        .quick-reply-section.delete-mode .quick-reply-item {
-            padding-right: 40px;
-            background: #fff;
-        }
-
-        .quick-reply-section.delete-mode .quick-reply-item:hover {
-            border-color: #ff4d4f;
-            background: #fff1f0;
-        }
-
-        .quick-reply-section.delete-mode .quick-reply-item.selected {
-            border-color: #ff4d4f;
-            background: #fff1f0;
-        }
-
-        .quick-reply-section.delete-mode .quick-reply-item::after {
-            content: '';
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 18px;
-            height: 18px;
-            border: 2px solid #ddd;
-            border-radius: 50%;
-            transition: all 0.2s ease;
-        }
-
-        .quick-reply-section.delete-mode .quick-reply-item.selected::after {
-            border-color: #ff4d4f;
-            background: #ff4d4f;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z'/%3E%3C/svg%3E");
-            background-size: 12px;
-            background-repeat: no-repeat;
-            background-position: center;
+        .quick-reply-item .edit-icon:hover {
+            color: #007bff;
         }
 
         .chat-page {
@@ -788,63 +729,54 @@
             z-index: 1000;
             justify-content: center;
             align-items: center;
-            padding: 20px;
         }
 
         .modal-content {
             background: white;
-            padding: 24px;
-            border-radius: 12px;
-            width: auto;
-            min-width: 320px;
-            max-width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-            position: relative;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            margin: auto;
-            transform: scale(0.95);
-            opacity: 0;
-            transition: all 0.2s ease-out;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 400px;
         }
 
-        .modal.active .modal-content {
-            transform: scale(1);
-            opacity: 1;
+        .modal-content h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
         }
 
         .modal-content textarea {
             width: 100%;
-            min-height: 120px;
-            max-height: 50vh;
-            padding: 12px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            line-height: 1.5;
-            resize: vertical;
-            margin: 12px 0 20px;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
         }
 
-        /* 快捷回复选中状态样式 */
-        .quick-reply-item.selected {
-            border: 2px solid #1890ff;
-            background-color: rgba(24, 144, 255, 0.05);
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
         }
 
-        /* 删除按钮状态样式 */
-        #deleteQuickReply {
-            background: #1890ff;
+        .modal-buttons button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
             color: white;
-            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-left: 10px;
         }
 
-        #deleteQuickReply.confirm-mode {
-            background: #40a9ff;
+        .modal-buttons button:hover {
+            background: #0056b3;
         }
 
-        #deleteQuickReply:hover {
-            opacity: 0.9;
+        .cancel-btn {
+            background: #6c757d;
+        }
+
+        .cancel-btn:hover {
+            background: #5a6268;
         }
 
         /* 在线人数显示 */
@@ -861,136 +793,105 @@
             transition: opacity 0.3s;
         }
 
-        /* 编辑模态框样式优化 */
-        #editQuickReplyModal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            transition: opacity 0.2s ease-in-out;
+        /* 快捷回复删除模式样式 */
+        .quick-reply-section.delete-mode .quick-reply-item {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
         }
 
-        #editQuickReplyModal .modal-content {
-            background: white;
+        .quick-reply-section.delete-mode .quick-reply-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        .quick-reply-section.delete-mode .quick-reply-item.selected {
+            border-color: #ff4d4f;
+            background-color: #fff1f0;
+        }
+
+        .quick-reply-section.delete-mode .quick-reply-item.selected:hover {
+            background-color: #ffccc7;
+        }
+
+        #deleteQuickReply.confirm-delete {
+            background-color: #ff4d4f;
+            color: white;
+        }
+
+        #deleteQuickReply.confirm-delete:hover {
+            background-color: #ff7875;
+        }
+
+        #addQuickReply.cancel-delete {
+            background-color: #d9d9d9;
+            color: rgba(0, 0, 0, 0.85);
+        }
+
+        #addQuickReply.cancel-delete:hover {
+            background-color: #f0f0f0;
+        }
+
+        /* 编辑模态框特殊样式 */
+        .modal-content.edit-modal {
+            width: 480px;
+            height: 480px;
+            display: flex;
+            flex-direction: column;
             padding: 24px;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 400px;
-            position: relative;
-            transform: scale(0.95);
-            opacity: 0;
-            transition: all 0.2s ease-in-out;
         }
 
-        #editQuickReplyModal.active .modal-content {
-            transform: scale(1);
-            opacity: 1;
-        }
-
-        #editQuickReplyContent {
+        .edit-modal textarea {
+            flex: 1;
             width: 100%;
-            min-height: 100px;
             padding: 12px;
+            margin: 16px 0;
             border: 1px solid #e0e0e0;
-            border-radius: 8px;
+            border-radius: 4px;
             font-size: 14px;
-            line-height: 1.5;
-            resize: vertical;
-            margin: 12px 0 20px;
+            line-height: 1.6;
+            resize: none;
         }
 
-        #editQuickReplyContent:focus {
+        .edit-modal textarea:focus {
             outline: none;
-            border-color: #1890ff;
-            box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
         }
 
-        .modal-buttons {
+        .edit-modal h3 {
+            margin: 0;
+            font-size: 18px;
+            color: #333;
+        }
+
+        .edit-modal .modal-buttons {
             display: flex;
             justify-content: flex-end;
             gap: 12px;
+            margin-top: auto;
         }
 
-        .modal-buttons button {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        #saveEditQuickReply {
-            background: #1890ff;
-            color: white;
-        }
-
-        #saveEditQuickReply:hover {
-            background: #40a9ff;
-        }
-
-        #cancelEditQuickReply {
-            background: #f0f0f0;
-            color: #666;
-        }
-
-        #cancelEditQuickReply:hover {
-            background: #e0e0e0;
-        }
-
-        /* 快捷回复区域基础样式 */
-        .quick-reply-section {
-            height: var(--chat-height);
-            display: none;
-            flex-direction: column;
-            padding: 15px;
-            position: relative;
-        }
-
-        /* 快捷回复头部样式 */
-        .quick-reply-header {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        /* 快捷回复按钮样式 */
-        .quick-reply-header button {
-            flex: 1;
-            padding: 8px;
+        .edit-modal .modal-buttons button {
+            padding: 8px 24px;
             border: none;
             border-radius: 4px;
-            background: #007bff;
-            color: white;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        /* 快捷回复列表样式 */
-        .quick-reply-list {
-            flex: 1;
-            overflow-y: auto;
-        }
-
-        /* 快捷回复项目样式 */
-        .quick-reply-item {
-            width: 224.1px;
-            height: 45px;
-            padding: 12px 15px;
-            margin-bottom: 10px;
-            background: #f8f9fa;
-            border-radius: 8px;
+            font-size: 14px;
             cursor: pointer;
             transition: all 0.2s ease;
-            border: 1px solid transparent;
+        }
+
+        .edit-modal .modal-buttons button:hover {
+            opacity: 0.9;
+        }
+
+        .edit-modal #updateQuickReply {
+            background: #007bff;
+            color: white;
+        }
+
+        .edit-modal #cancelEditQuickReply {
+            background: #6c757d;
+            color: white;
         }
     </style>
 </head>
@@ -1002,8 +903,8 @@
     <div class="chat-wrapper">
         <div class="quick-reply-section left">
             <div class="quick-reply-header">
-                <button>添加</button>
-                <button>编辑</button>
+                <button>추가</button>
+                <button>편집</button>
             </div>
             <div class="quick-reply-list left-replies"></div>
         </div>
@@ -1037,8 +938,8 @@
         </div>
         <div class="quick-reply-section right">
             <div class="quick-reply-header">
-                <button onclick="addQuickReply('right')">添加</button>
-                <button onclick="editQuickReply('right')">编辑</button>
+                <button onclick="addQuickReply('right')">추가</button>
+                <button onclick="editQuickReply('right')">편집</button>
             </div>
             <div class="quick-reply-list right-replies"></div>
         </div>
@@ -1061,25 +962,13 @@
         </div>
     </div>
 
-    <!-- 快捷回复删除模态框 -->
-    <div id="deleteQuickReplyModal" class="modal">
-        <div class="modal-content">
-            <h3>삭제할 빠른 답장 선택</h3>
-            <div class="quick-reply-delete-list"></div>
-            <div class="modal-buttons">
-                <button id="confirmDeleteQuickReply">확인</button>
-                <button id="cancelDeleteQuickReply" class="cancel-btn">취소</button>
-            </div>
-        </div>
-    </div>
-
     <!-- 快捷回复编辑模态框 -->
     <div id="editQuickReplyModal" class="modal">
-        <div class="modal-content">
-            <h3>빠른 답장 수정</h3>
-            <textarea id="editQuickReplyContent" placeholder="빠른 답장 내용을 입력하세요"></textarea>
+        <div class="modal-content edit-modal">
+            <h3>빠른 답장 편집</h3>
+            <textarea id="editQuickReplyContent" placeholder="수정할 내용을 입력하세요"></textarea>
             <div class="modal-buttons">
-                <button id="saveEditQuickReply">저장</button>
+                <button id="updateQuickReply">저장</button>
                 <button id="cancelEditQuickReply" class="cancel-btn">취소</button>
             </div>
         </div>
