@@ -494,7 +494,7 @@ function appendSystemMessage(message) {
         logoMessage.innerHTML = `
             <div class="logo-container">
                 <div class="logo-circle">
-                    <div class="icon"></div>
+                    <div class="bunjang-icon"></div>
                 </div>
                 <div class="logo-text">
                     <span class="brand-name">번개장터</span>

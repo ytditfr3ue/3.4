@@ -89,10 +89,8 @@ app.get('/favicon.ico', (req, res) => {
     }
 });
 
-// 静态文件服务
-app.use(express.static('public', {
-    index: false  // 禁用自动服务 index.html
-}));
+// 添加静态文件服务
+app.use(express.static('public'));
 app.use('/uploads', express.static('uploads'));
 
 // 管理员页面路由 - 使用特定路径
