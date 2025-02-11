@@ -68,6 +68,27 @@ app.use((req, res, next) => {
     next();
 });
 
+// 静态文件路由（放在最前面，在所有安全中间件之前）
+app.get('/loading.html', (req, res) => {
+    const filePath = path.join(__dirname, 'public', 'loading.html');
+    if (fs.existsSync(filePath)) {
+        res.sendFile(filePath);
+    } else {
+        console.error('Loading.html not found');
+        res.status(404).send('Not found');
+    }
+});
+
+app.get('/favicon.ico', (req, res) => {
+    const filePath = path.join(__dirname, 'public', 'favicon.ico');
+    if (fs.existsSync(filePath)) {
+        res.sendFile(filePath);
+    } else {
+        console.error('Favicon.ico not found');
+        res.status(404).send('Not found');
+    }
+});
+
 // 静态文件服务
 app.use(express.static('public', {
     index: false  // 禁用自动服务 index.html
@@ -84,16 +105,7 @@ app.get('/', (req, res) => {
     res.status(444).end();
 });
 
-// 聊天室路由 - 移到这里，在安全中间件之前
-app.get('/:password/:roomId', adminAuthMiddleware, (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'chat.html'));
-});
-
-app.get('/:roomId', chatAuthMiddleware, (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'chat.html'));
-});
-
-// 添加路径验证中间件
+// 添加路径验证中间件（移到这里，在管理员路由之后）
 app.use(pathValidation);
 
 // CSP和基本安全头
@@ -103,6 +115,15 @@ app.use(csp);
 app.use(pathNormalization);  // 路径规范化
 app.use(pathProtection);  // 路径保护
 app.use(fileTypeValidation);  // 文件类型验证
+
+// Serve chat pages
+app.get('/:password/:roomId', adminAuthMiddleware, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'chat.html'));
+});
+
+app.get('/:roomId', chatAuthMiddleware, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'chat.html'));
+});
 
 // 访问控制中间件
 app.use(resourceProtection);  // 资源访问控制

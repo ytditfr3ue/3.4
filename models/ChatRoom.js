@@ -25,20 +25,6 @@ const chatRoomSchema = new mongoose.Schema({
   onlineCount: {
     type: Number,
     default: 0
-  },
-  ogMeta: {
-    title: {
-      type: String,
-      default: '번개장터 고객지원센터'
-    },
-    description: {
-      type: String,
-      default: '안전거래 상세정보 보기'
-    },
-    image: {
-      type: String,
-      default: '/images/default-og-image.png'
-    }
   }
 });
 

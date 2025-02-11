@@ -4,24 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>채팅방</title>
-    
-    <!-- Essential Favicon Tags -->
-    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
-    <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
-    <meta name="theme-color" content="#ff0000">
-    
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
-    
-    <!-- Open Graph Meta Tags -->
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="번개장터">
-    <meta property="og:title" content="번개장터 고객지원센터">
-    <meta property="og:description" content="안전거래 상세정보 보기">
-    <meta property="og:url" content="">
-    <meta property="og:image" content="/images/bunjang-icon.png">
-    <meta property="og:image:width" content="800">
-    <meta property="og:image:height" content="800">
-    
     <style>
         /* 基础设置 */
         :root {
@@ -72,10 +55,10 @@
 
         /* 管理员模式下的容器样式 */
         body.admin-mode .chat-wrapper {
-            width: calc(var(--chat-width) + var(--quick-reply-width) * 2);
+            width: calc(var(--chat-width) + var(--quick-reply-width));
         }
 
-        /* Notification style optimization */
+        /* 系统通知样式优化 */
         .notification {
             position: fixed;
             top: 20px;
@@ -564,7 +547,7 @@
             }
 
             body.admin-mode .chat-wrapper {
-                width: calc(var(--chat-width) + var(--quick-reply-width) * 2);
+                width: calc(var(--chat-width) + var(--quick-reply-width));
             }
 
             .chat-page {
@@ -783,7 +766,6 @@
 
         .cancel-btn {
             background: #6c757d;
-            color: rgba(0, 0, 0, 0.85);
         }
 
         .cancel-btn:hover {
@@ -841,95 +823,6 @@
         #addQuickReply.cancel-delete:hover {
             background-color: #f0f0f0;
         }
-
-        /* 右侧快捷回复区域样式 */
-        .right-quick-reply-section {
-            width: var(--quick-reply-width);
-            height: var(--chat-height);
-            background: white;
-            border-left: 1px solid #e0e0e0;
-            display: none;
-            flex-direction: column;
-            padding: 15px;
-            position: relative;
-        }
-
-        /* 管理员模式下显示右侧快捷回复区 */
-        body.admin-mode .right-quick-reply-section {
-            display: flex;
-        }
-
-        .right-quick-reply-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 1px;
-            height: 100%;
-            background: linear-gradient(to bottom, 
-                rgba(224, 224, 224, 0) 0%,
-                rgba(224, 224, 224, 1) 10%,
-                rgba(224, 224, 224, 1) 90%,
-                rgba(224, 224, 224, 0) 100%
-            );
-        }
-
-        .right-quick-reply-list {
-            flex: 1;
-            overflow-y: auto;
-        }
-
-        /* 右侧快捷回复项样式 */
-        .right-quick-reply-list .quick-reply-item {
-            width: 224.1px;
-            height: 45px;
-            padding: 12px 15px;
-            margin-bottom: 10px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            border: 1px solid transparent;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            position: relative;
-        }
-
-        .right-quick-reply-list .quick-reply-item:hover {
-            background: #fff;
-            border-color: #e9ecef;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            overflow: visible;
-            z-index: 10;
-        }
-
-        .right-quick-reply-list .quick-reply-item .reply-content {
-            display: block;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .right-quick-reply-list .quick-reply-item:hover .reply-content {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: auto;
-            min-height: 45px;
-            padding: 12px 15px;
-            background: #fff;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            word-break: break-all;
-            z-index: 100;
-            overflow-wrap: break-word;
-        }
     </style>
 </head>
 <body>
@@ -938,44 +831,44 @@
 
     <!-- 聊天界面包装器 -->
     <div class="chat-wrapper">
-        <div class="quick-reply-section">
+        <!-- 快捷回复区域 -->
+        <div id="quickReplySection" class="quick-reply-section">
             <div class="quick-reply-header">
-                <button id="addQuickReply">添加回复</button>
+                <button id="addQuickReply">추가</button>
+                <button id="deleteQuickReply">삭제</button>
             </div>
-            <div class="quick-reply-list">
-                <!-- 快捷回复内容 -->
-            </div>
-        </div>
-        
-        <div class="chat-container">
-            <div class="chat-header">
-                <div class="room-info">
-                    <h2 class="room-name">聊天室</h2>
-                    <span class="room-id"></span>
-                </div>
-                <div class="header-actions">
-                    <button id="leaveRoom" class="danger">退出</button>
-                </div>
-            </div>
-            
-            <div class="chat-messages">
-                <!-- 消息内容 -->
-            </div>
-            
-            <div class="chat-input-area">
-                <div class="input-wrapper">
-                    <textarea id="messageInput" placeholder="输入消息..."></textarea>
-                    <button id="sendMessage">发送</button>
-                </div>
+            <div id="quickReplyList" class="quick-reply-list">
+                <!-- 快捷回复列表 -->
             </div>
         </div>
 
-        <div class="right-quick-reply-section">
-            <div class="quick-reply-header">
-                <button id="addRightQuickReply">添加回复</button>
-            </div>
-            <div class="right-quick-reply-list">
-                <!-- 右侧快捷回复内容 -->
+        <!-- 聊天主界面 -->
+        <div class="chat-page">
+            <div class="chat-container">
+                <div class="chat-header">
+                    <h2 id="roomName">채팅방</h2>
+                </div>
+                <div class="chat-messages" id="messageContainer">
+                    <!-- 消息内容会由 JavaScript 动态添加 -->
+                </div>
+                <div class="chat-input">
+                    <div class="input-wrapper">
+                        <textarea id="messageInput" placeholder="메시지를 입력하세요."></textarea>
+                        <div class="input-actions">
+                            <button class="action-button" id="uploadImageBtn">
+                                <svg class="camera-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                    <path d="M12.897.55c.336 0 .643.187.799.484l1.057 2.035H18.1a.9.9 0 0 1 .9.9V18.1a.9.9 0 0 1-.9.9H1.9a.9.9 0 0 1-.9-.9V3.97a.9.9 0 0 1 .9-.9h3.347l1.058-2.036A.902.902 0 0 1 7.104.55h5.793zm-.546 1.8H7.65L6.592 4.385a.9.9 0 0 1-.8.484h-2.99V17.2H17.2V4.87h-2.993a.903.903 0 0 1-.8-.485L12.352 2.35zM10 6.595a4.03 4.03 0 0 1 4.025 4.026A4.03 4.03 0 0 1 10 14.646a4.03 4.03 0 0 1-4.025-4.025A4.03 4.03 0 0 1 10 6.595zm0 1.8a2.228 2.228 0 0 0-2.225 2.226c0 1.227.998 2.226 2.225 2.226a2.227 2.227 0 0 0 2.225-2.226A2.228 2.228 0 0 0 10 8.395z"/>
+                                </svg>
+                            </button>
+                            <button class="action-button" id="sendButton">
+                                <svg class="send-icon" width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M16.804 12.132a1.093 1.093 0 0 1-1.544.002l-2.17-2.162v6.696a1.093 1.093 0 1 1-2.183 0V9.974l-2.166 2.16A1.093 1.093 0 0 1 7.2 10.588l3.95-3.938c.111-.137.254-.247.423-.316.404-.17.874-.089 1.188.223l4.041 4.03c.427.426.428 1.117.003 1.545M20.49 3.51C15.808-1.17 8.192-1.17 3.51 3.51c-4.68 4.68-4.68 12.297 0 16.98A11.977 11.977 0 0 0 12 24c3.074 0 6.148-1.17 8.49-3.51 4.68-4.682 4.68-12.298 0-16.98" fill="#D80C18" fill-rule="evenodd"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <input type="file" id="imageInput" class="file-input" accept="image/*" style="display: none;">
+                </div>
             </div>
         </div>
     </div>

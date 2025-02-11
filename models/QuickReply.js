@@ -5,12 +5,6 @@ const quickReplySchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    side: {
-        type: String,
-        enum: ['left', 'right'],
-        required: true,
-        default: 'left'
-    },
     createdAt: {
         type: Date,
         default: Date.now
