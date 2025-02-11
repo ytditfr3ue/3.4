@@ -10,6 +10,7 @@ const fs = require('fs');
 const QuickReply = require('../models/QuickReply');
 const { uploadLimits } = require('../config/security');
 const { uploadValidation } = require('../middleware/security');
+const mongoose = require('mongoose');
 
 // 生成带user前缀的5位随机数字ID
 function generateRoomId() {
@@ -180,7 +181,7 @@ router.get('/quick-replies', async (req, res) => {
         const replies = await QuickReply.find().sort({ createdAt: -1 });
         res.json(replies);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: '빠른 답장을 불러올 수 없습니다' });
     }
 });
 
@@ -192,20 +193,58 @@ router.post('/quick-replies', authMiddleware, async (req, res) => {
         await quickReply.save();
         res.status(201).json(quickReply);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: '저장 실패' });
     }
 });
 
-// 删除快捷回复
+// Batch delete route MUST come before individual delete route
+router.delete('/quick-replies/batch-delete', authMiddleware, async (req, res) => {
+    try {
+        const { ids } = req.body;
+        console.log('Received IDs for batch delete:', ids);
+
+        if (!Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ message: '삭제할 항목을 선택해주세요' });
+        }
+
+        const validIds = ids.filter(id => mongoose.Types.ObjectId.isValid(id));
+        if (validIds.length === 0) {
+            return res.status(400).json({ message: '유효하지 않은 ID입니다' });
+        }
+
+        const result = await QuickReply.deleteMany({
+            _id: { $in: validIds.map(id => new mongoose.Types.ObjectId(id)) }
+        });
+
+        console.log('Batch delete result:', result);
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ message: '삭제할 항목을 찾을 수 없습니다' });
+        }
+
+        res.json({
+            message: `${result.deletedCount}개 항목이 삭제되었습니다`,
+            deletedCount: result.deletedCount
+        });
+    } catch (error) {
+        console.error('Batch delete error:', error);
+        res.status(500).json({ message: '삭제 중 오류가 발생했습니다' });
+    }
+});
+
 router.delete('/quick-replies/:id', authMiddleware, async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ message: '유효하지 않은 ID입니다' });
+        }
+
         const result = await QuickReply.findByIdAndDelete(req.params.id);
         if (!result) {
-            return res.status(404).json({ message: '快捷回复不存在' });
+            return res.status(404).json({ message: '삭제할 항목을 찾을 수 없습니다' });
         }
-        res.json({ message: '快捷回复已删除' });
+        res.json({ message: '삭제되었습니다' });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: '삭제 중 오류가 발생했습니다' });
     }
 });
 
