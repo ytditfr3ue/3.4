@@ -79,13 +79,22 @@ app.get('/loading.html', (req, res) => {
     }
 });
 
+// 修改favicon.ico处理
 app.get('/favicon.ico', (req, res) => {
-    const filePath = path.join(__dirname, 'public', 'favicon.ico');
-    if (fs.existsSync(filePath)) {
-        res.sendFile(filePath);
+    const faviconPaths = [
+        path.join(__dirname, 'public', 'favicon.ico'),
+        path.join(__dirname, 'public', 'images', 'favicon.ico'),
+        path.join(__dirname, 'public', 'images', 'icon.svg')
+    ];
+
+    // 尝试找到可用的图标文件
+    const existingFavicon = faviconPaths.find(p => fs.existsSync(p));
+    
+    if (existingFavicon) {
+        res.sendFile(existingFavicon);
     } else {
-        console.error('Favicon.ico not found');
-        res.status(404).send('Not found');
+        // 如果没有找到图标，返回一个空响应而不是444
+        res.status(204).end();
     }
 });
 
