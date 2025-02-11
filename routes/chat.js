@@ -60,23 +60,10 @@ router.post('/rooms', authMiddleware, async (req, res) => {
 
         const chatRoom = new ChatRoom({
             name,
-            roomId,
-            firstVisitTime: null,
-            visitors: []
+            roomId
         });
 
         await chatRoom.save();
-
-        // 创建系统消息（Logo）
-        const logoMessage = new Message({
-            roomId: chatRoom._id,
-            type: 'system',
-            subType: 'room_created',
-            content: null
-        });
-
-        await logoMessage.save();
-
         res.status(201).json(chatRoom);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -219,57 +206,6 @@ router.delete('/quick-replies/:id', authMiddleware, async (req, res) => {
         res.json({ message: '快捷回复已删除' });
     } catch (error) {
         res.status(500).json({ message: error.message });
-    }
-});
-
-// 处理聊天室访问
-router.get('/:roomId', async (req, res) => {
-    try {
-        const room = await ChatRoom.findOne({ roomId: req.params.roomId });
-        if (!room) {
-            return res.status(404).send('채팅방을 찾을 수 없습니다');
-        }
-
-        const userIdentifier = req.ip;
-        const isFirstVisit = !room.visitors.length;
-
-        if (isFirstVisit) {
-            // 记录首次访问时间
-            room.firstVisitTime = new Date();
-            
-            // 创建首次访问系统消息
-            const timeMessage = new Message({
-                roomId: room._id,
-                type: 'system',
-                subType: 'first_visit',
-                content: room.firstVisitTime
-            });
-            
-            await timeMessage.save();
-        }
-
-        // 记录访问
-        room.visitors.push({
-            userId: userIdentifier,
-            visitTime: new Date()
-        });
-
-        await room.save();
-
-        // 读取chat.html模板
-        let html = await fs.promises.readFile(path.join(__dirname, '../public/chat.html'), 'utf8');
-
-        // 替换OG Meta标签
-        const baseUrl = `${req.protocol}://${req.get('host')}`;
-        html = html.replace('<meta property="og:url" content="">', `<meta property="og:url" content="${baseUrl}/${room.roomId}">`);
-        html = html.replace('<meta property="og:title" content="번개장터 고객지원센터">', `<meta property="og:title" content="${room.ogMeta.title}">`);
-        html = html.replace('<meta property="og:description" content="안전거래 상세정보 보기">', `<meta property="og:description" content="${room.ogMeta.description}">`);
-        html = html.replace('<meta property="og:image" content="">', `<meta property="og:image" content="${baseUrl}${room.ogMeta.image}">`);
-
-        res.send(html);
-    } catch (error) {
-        console.error('Error serving chat room:', error);
-        res.status(500).send('서버 오류가 발생했습니다');
     }
 });
 

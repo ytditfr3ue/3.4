@@ -293,14 +293,21 @@ async function copyRoomLink(roomId, type) {
 
 // 删除聊天室
 function deleteRoom(roomId) {
-    const roomElement = document.querySelector(`.room-item[data-room-id="${roomId}"]`);
+    const roomElement = document.querySelector(`[data-room-id="${roomId}"]`);
     if (!roomElement) {
         console.error('Room element not found');
         showNotification('채팅방을 찾을 수 없습니다', 'error');
         return;
     }
     
-    const roomNameElement = roomElement.querySelector('h4');
+    const roomItemElement = roomElement.closest('.room-item');
+    if (!roomItemElement) {
+        console.error('Room item element not found');
+        showNotification('채팅방 정보를 찾을 수 없습니다', 'error');
+        return;
+    }
+    
+    const roomNameElement = roomItemElement.querySelector('h4');
     if (!roomNameElement) {
         console.error('Room name element not found');
         showNotification('채팅방 이름을 찾을 수 없습니다', 'error');

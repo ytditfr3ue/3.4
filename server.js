@@ -79,27 +79,20 @@ app.get('/loading.html', (req, res) => {
     }
 });
 
-// 修改favicon.ico处理
 app.get('/favicon.ico', (req, res) => {
-    const faviconPaths = [
-        path.join(__dirname, 'public', 'favicon.ico'),
-        path.join(__dirname, 'public', 'images', 'favicon.ico'),
-        path.join(__dirname, 'public', 'images', 'icon.svg')
-    ];
-
-    // 尝试找到可用的图标文件
-    const existingFavicon = faviconPaths.find(p => fs.existsSync(p));
-    
-    if (existingFavicon) {
-        res.sendFile(existingFavicon);
+    const filePath = path.join(__dirname, 'public', 'favicon.ico');
+    if (fs.existsSync(filePath)) {
+        res.sendFile(filePath);
     } else {
-        // 如果没有找到图标，返回一个空响应而不是444
-        res.status(204).end();
+        console.error('Favicon.ico not found');
+        res.status(404).send('Not found');
     }
 });
 
-// 添加静态文件服务
-app.use(express.static('public'));
+// 静态文件服务
+app.use(express.static('public', {
+    index: false  // 禁用自动服务 index.html
+}));
 app.use('/uploads', express.static('uploads'));
 
 // 管理员页面路由 - 使用特定路径

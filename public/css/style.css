@@ -582,7 +582,7 @@ button.danger:hover {
     }
 }
 
-/* Notification styles */
+/* 通知样式 */
 .notification {
     position: fixed;
     top: 20px;

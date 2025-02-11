@@ -26,17 +26,6 @@ const chatRoomSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  firstVisitTime: {
-    type: Date,
-    default: null
-  },
-  visitors: [{
-    userId: String,
-    visitTime: {
-      type: Date,
-      default: Date.now
-    }
-  }],
   ogMeta: {
     title: {
       type: String,

@@ -7,24 +7,17 @@ const messageSchema = new mongoose.Schema({
     required: true
   },
   content: {
-    type: mongoose.Schema.Types.Mixed,
+    type: String,
     required: true
   },
   type: {
     type: String,
-    enum: ['text', 'image', 'system'],
+    enum: ['text', 'image'],
     required: true
-  },
-  subType: {
-    type: String,
-    enum: ['room_created', 'first_visit', null],
-    default: null
   },
   sender: {
     type: String,
-    required: function() {
-      return this.type !== 'system';
-    }
+    required: true
   },
   createdAt: {
     type: Date,
