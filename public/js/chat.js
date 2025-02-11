@@ -154,7 +154,7 @@ function connectSocket() {
 
     socket.on('roomDeleted', () => {
         cleanupRoom(roomId);
-        showNotification('此聊天室已被删除', 'error');
+        showNotification('채팅방이 삭제되었습니다', 'error');
         window.location.href = 'https://m.bunjang.co.kr';
     });
 
@@ -203,7 +203,7 @@ async function loadMessages() {
         scrollToBottom();
     } catch (error) {
         console.error('加载消息失败:', error);
-        showNotification('无法加载历史消息', 'error');
+        showNotification('메시지 기록을 불러올 수 없습니다', 'error');
     }
 }
 
@@ -482,8 +482,55 @@ async function uploadImage() {
     imageInput.value = '';
 }
 
-// 添加消息到界面
+// 添加系统消息处理函数
+function appendSystemMessage(message) {
+    const messageElement = document.createElement('div');
+    messageElement.className = 'message system';
+
+    if (message.subType === 'room_created') {
+        // 渲染Logo消息
+        const logoMessage = document.createElement('div');
+        logoMessage.className = 'logo-message';
+        logoMessage.innerHTML = `
+            <div class="logo-container">
+                <div class="logo-circle">
+                    <div class="icon"></div>
+                </div>
+                <div class="logo-text">
+                    <span class="brand-name">번개장터</span>
+                    <span class="official-tag">공식</span>
+                </div>
+            </div>
+        `;
+        messageElement.appendChild(logoMessage);
+    } else if (message.subType === 'first_visit') {
+        // 渲染时间消息
+        const timeMessage = document.createElement('div');
+        timeMessage.className = 'system-time-message';
+        const date = new Date(message.content);
+        timeMessage.textContent = date.toLocaleString('ko-KR', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+        messageElement.appendChild(timeMessage);
+    }
+
+    messageContainer.appendChild(messageElement);
+    scrollToBottom();
+}
+
+// 修改现有的appendMessage函数
 function appendMessage(message) {
+    if (message.type === 'system') {
+        appendSystemMessage(message);
+        return;
+    }
+    
+    // 原有的消息处理逻辑
     const messageElement = document.createElement('div');
     
     // 根据聊天室类型和发送者决定消息位置
