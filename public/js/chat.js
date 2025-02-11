@@ -50,6 +50,8 @@ const modalImage = document.getElementById('modalImage');
 const quickReplySection = document.getElementById('quickReplySection');
 const quickReplyList = document.getElementById('quickReplyList');
 const addQuickReplyBtn = document.getElementById('addQuickReply');
+const addRightQuickReplyBtn = document.getElementById('addRightQuickReply');
+const rightQuickReplyList = document.querySelector('.right-quick-reply-list');
 const deleteQuickReplyBtn = document.getElementById('deleteQuickReply');
 const addQuickReplyModal = document.getElementById('addQuickReplyModal');
 const quickReplyContent = document.getElementById('quickReplyContent');
@@ -61,6 +63,7 @@ const quickReplyDeleteList = document.querySelector('.quick-reply-delete-list');
 let socket = null;
 let isConnected = false;
 let currentReplies = [];
+let rightCurrentReplies = [];
 let onlineCount = 0;
 let isDeleteMode = false;
 let selectedReplies = new Set();
@@ -238,12 +241,24 @@ function setupEventListeners() {
 function setupQuickReplyEvents() {
     if (!isAdmin) return;
 
+    // 左侧快捷回复
     addQuickReplyBtn.addEventListener('click', () => {
-        if (isDeleteMode) {
-            exitDeleteMode();
-            return;
-        }
-        addQuickReplyModal.style.display = 'flex';
+        showQuickReplyModal('left');
+    });
+
+    // 右侧快捷回复
+    addRightQuickReplyBtn.addEventListener('click', () => {
+        showQuickReplyModal('right');
+    });
+
+    // 左侧快捷回复点击事件
+    quickReplyList.addEventListener('click', (e) => {
+        handleQuickReplyClick(e, 'left');
+    });
+
+    // 右侧快捷回复点击事件
+    rightQuickReplyList.addEventListener('click', (e) => {
+        handleQuickReplyClick(e, 'right');
     });
 
     cancelQuickReplyBtn.addEventListener('click', () => {
@@ -296,8 +311,6 @@ function setupQuickReplyEvents() {
         }
     });
 
-    quickReplyList.addEventListener('click', handleQuickReplyClick);
-
     // 添加模态框背景点击关闭事件
     addQuickReplyModal.addEventListener('click', (e) => {
         if (e.target === addQuickReplyModal) {
@@ -313,34 +326,107 @@ function setupQuickReplyEvents() {
     });
 }
 
-// 加载快捷回复
-async function loadQuickReplies() {
-    try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/chat/quick-replies', {
-            headers: {
-                'Authorization': `Bearer ${token}`
+// 显示快捷回复模态框
+function showQuickReplyModal(side) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>添加快捷回复</h3>
+            <textarea id="quickReplyContent" placeholder="输入快捷回复内容..."></textarea>
+            <div class="modal-actions">
+                <button id="cancelQuickReply">取消</button>
+                <button id="saveQuickReply" data-side="${side}">保存</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    const textarea = modal.querySelector('#quickReplyContent');
+    const saveBtn = modal.querySelector('#saveQuickReply');
+    const cancelBtn = modal.querySelector('#cancelQuickReply');
+
+    cancelBtn.onclick = () => {
+        document.body.removeChild(modal);
+    };
+
+    saveBtn.onclick = async () => {
+        const content = textarea.value.trim();
+        if (!content) {
+            showNotification('请输入回复内容', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/quick-replies', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    content,
+                    side
+                })
+            });
+
+            if (!response.ok) throw new Error('保存失败');
+
+            const reply = await response.json();
+            if (side === 'left') {
+                currentReplies.push(reply);
+                renderQuickReplies(currentReplies, 'left');
+            } else {
+                rightCurrentReplies.push(reply);
+                renderQuickReplies(rightCurrentReplies, 'right');
             }
-        });
-        const replies = await response.json();
-        currentReplies = replies;
-        renderQuickReplies(replies);
-    } catch (error) {
-        console.error('Failed to load quick replies:', error);
-    }
+
+            document.body.removeChild(modal);
+            showNotification('添加成功');
+        } catch (error) {
+            console.error('保存快捷回复失败:', error);
+            showNotification('保存失败', 'error');
+        }
+    };
+}
+
+// 处理快捷回复点击
+function handleQuickReplyClick(e, side) {
+    const item = e.target.closest('.quick-reply-item');
+    if (!item) return;
+
+    const content = item.querySelector('.reply-content').textContent;
+    messageInput.value = content;
+    messageInput.focus();
 }
 
 // 渲染快捷回复列表
-function renderQuickReplies(replies) {
-    quickReplyList.innerHTML = '';
-    replies.forEach(reply => {
-        const div = document.createElement('div');
-        div.className = 'quick-reply-item';
-        div.dataset.id = reply._id;
-        div.dataset.content = reply.content;
-        div.innerHTML = `<span class="reply-content">${reply.content}</span>`;
-        quickReplyList.appendChild(div);
-    });
+function renderQuickReplies(replies, side) {
+    const container = side === 'left' ? quickReplyList : rightQuickReplyList;
+    container.innerHTML = replies.map(reply => `
+        <div class="quick-reply-item">
+            <span class="reply-content">${reply.content}</span>
+        </div>
+    `).join('');
+}
+
+// 加载快捷回复
+async function loadQuickReplies() {
+    try {
+        // 加载左侧快捷回复
+        const leftResponse = await fetch('/api/quick-replies?side=left');
+        const leftReplies = await leftResponse.json();
+        currentReplies = leftReplies;
+        renderQuickReplies(leftReplies, 'left');
+
+        // 加载右侧快捷回复
+        const rightResponse = await fetch('/api/quick-replies?side=right');
+        const rightReplies = await rightResponse.json();
+        rightCurrentReplies = rightReplies;
+        renderQuickReplies(rightReplies, 'right');
+    } catch (error) {
+        console.error('加载快捷回复失败:', error);
+        showNotification('无法加载快捷回复', 'error');
+    }
 }
 
 // 显示删除快捷回复模态框
@@ -377,31 +463,6 @@ function exitDeleteMode() {
     document.querySelectorAll('.quick-reply-item.selected').forEach(item => {
         item.classList.remove('selected');
     });
-}
-
-// 处理快捷回复点击
-function handleQuickReplyClick(e) {
-    const item = e.target.closest('.quick-reply-item');
-    if (!item) return;
-
-    if (isDeleteMode) {
-        item.classList.toggle('selected');
-        const replyId = item.dataset.id;
-        if (item.classList.contains('selected')) {
-            selectedReplies.add(replyId);
-        } else {
-            selectedReplies.delete(replyId);
-        }
-        return;
-    }
-
-    const content = item.dataset.content;
-    if (content && isConnected) {
-        socket.emit('message', {
-            content,
-            type: 'text'
-        });
-    }
 }
 
 // 保存快捷回复

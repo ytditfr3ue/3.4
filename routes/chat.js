@@ -177,7 +177,8 @@ router.post('/upload', (req, res) => {
 // 获取快捷回复
 router.get('/quick-replies', async (req, res) => {
     try {
-        const replies = await QuickReply.find().sort({ createdAt: -1 });
+        const { side = 'left' } = req.query;
+        const replies = await QuickReply.find({ side }).sort({ createdAt: -1 });
         res.json(replies);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -187,8 +188,17 @@ router.get('/quick-replies', async (req, res) => {
 // 添加快捷回复
 router.post('/quick-replies', authMiddleware, async (req, res) => {
     try {
-        const { content } = req.body;
-        const quickReply = new QuickReply({ content });
+        const { content, side = 'left' } = req.body;
+        
+        if (!content) {
+            return res.status(400).json({ message: '回复内容不能为空' });
+        }
+
+        const quickReply = new QuickReply({ 
+            content,
+            side
+        });
+        
         await quickReply.save();
         res.status(201).json(quickReply);
     } catch (error) {
