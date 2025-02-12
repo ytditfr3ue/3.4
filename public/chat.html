@@ -346,11 +346,9 @@
 
         /* 时间样式 */
         .message-time {
-            font-size: 9.4px;
-            color: #adb4bb;
-            flex-shrink: 0;
-            letter-spacing: -0.45px;
-            font-weight: 500;
+            font-size: 12px;
+            color: #999;
+            margin-top: 28px;
             text-align: left;
         }
 
@@ -967,7 +965,7 @@
         .message-time {
             font-size: 12px;
             color: #999;
-            margin-top: 4px;
+            margin-top: 28px;
             text-align: left;
         }
 
@@ -1144,6 +1142,151 @@
         #cancelProductEdit {
             background: #6c757d;
             color: white;
+        }
+
+        /* 欢迎消息样式 */
+        .welcome-message {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            width: 100%;
+        }
+
+        .welcome-logo {
+            width: calc(var(--chat-width) / 5);
+            height: calc(var(--chat-width) / 5);
+            min-width: calc(var(--chat-width) / 5);
+            min-height: calc(var(--chat-width) / 5);
+            max-width: calc(var(--chat-width) / 5);
+            max-height: calc(var(--chat-width) / 5);
+            position: relative;
+            margin: 0 auto 10px auto;
+            background-color: #d80c18;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+            transform: none;
+            pointer-events: none;
+        }
+
+        .welcome-logo::before {
+            content: "";
+            position: absolute;
+            width: calc(var(--chat-width) / 10);
+            height: calc(var(--chat-width) / 8);
+            min-width: calc(var(--chat-width) / 10);
+            min-height: calc(var(--chat-width) / 8);
+            max-width: calc(var(--chat-width) / 10);
+            max-height: calc(var(--chat-width) / 8);
+            background-color: #ffffff;
+            clip-path: polygon(
+                68% 0%,
+                65% 44%,
+                100% 44%,
+                32% 100%,
+                35% 56%,
+                0% 56%
+            );
+            transform: none;
+            pointer-events: none;
+        }
+
+        .logo-message {
+            display: flex;
+            justify-content: center;
+            padding: 0;
+        }
+
+        .logo-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+
+        .logo-text {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .brand-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: #191919;
+            letter-spacing: -0.3px;
+        }
+
+        .official-tag {
+            background-color: #191919;
+            color: #fff;
+            padding: 2px 4px;
+            border-radius: 2px;
+            font-size: 11px;
+            letter-spacing: -0.2px;
+        }
+
+        /* 移动端响应式调整 */
+        @media screen and (max-width: 511px) {
+            .welcome-logo {
+                width: calc(100vw / 5);
+                height: calc(100vw / 5);
+                min-width: calc(100vw / 5);
+                min-height: calc(100vw / 5);
+                max-width: calc(100vw / 5);
+                max-height: calc(100vw / 5);
+            }
+
+            .welcome-logo::before {
+                width: calc(100vw / 10);
+                height: calc(100vw / 8);
+                min-width: calc(100vw / 10);
+                min-height: calc(100vw / 8);
+                max-width: calc(100vw / 10);
+                max-height: calc(100vw / 8);
+            }
+        }
+
+        .welcome-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin: 8px 0;
+        }
+
+        .welcome-time {
+            font-size: 12px;
+            color: #999;
+            margin-top: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 0;
+            text-align: center;
+        }
+
+        .welcome-time::before,
+        .welcome-time::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background-color: #eee;
+        }
+
+        .welcome-text {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+            font-weight: 400;
+            letter-spacing: -0.5px;
+            line-height: 1.2;
         }
     </style>
 </head>

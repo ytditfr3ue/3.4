@@ -1,3 +1,22 @@
+function addWelcomeMessage() {
+    const welcomeHtml = `
+        <div class="welcome-message">
+            <div class="welcome-logo"></div>
+            <div class="logo-message">
+                <div class="logo-container">
+                    <div class="logo-text">
+                        <span class="brand-name">번개장터</span>
+                        <span class="official-tag">공식</span>
+                    </div>
+                    <div class="welcome-text">번개장터의 고객센터입니다.</div>
+                </div>
+            </div>
+            <div class="welcome-time">${formatDate(new Date())}</div>
+        </div>
+    `;
+    messageContainer.insertAdjacentHTML('afterbegin', welcomeHtml);
+}
+
 // 获取URL参数
 const path = window.location.pathname;
 const pathParts = path.split('/').filter(part => part);
@@ -78,12 +97,8 @@ let cardSettings = {
 
 // 格式化日期
 function formatDate(date) {
-    return new Date(date).toLocaleTimeString('ko-KR', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-    }).replace('AM', '오전')
-      .replace('PM', '오후');
+    const d = new Date(date);
+    return `${d.getFullYear()}년${d.getMonth() + 1}월${d.getDate()}일`;
 }
 
 // 发送卡片消息
@@ -162,6 +177,9 @@ async function init() {
         if (roomNameElement) {
             roomNameElement.textContent = room.name;
         }
+
+        // 添加欢迎消息
+        addWelcomeMessage();
 
         // 加载历史消息
         await loadMessages();
