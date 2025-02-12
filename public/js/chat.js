@@ -78,39 +78,38 @@ let cardSettings = {
 
 // 格式化日期
 function formatDate(date) {
-    const options = {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
+    return new Date(date).toLocaleTimeString('ko-KR', {
+        hour: 'numeric',
         minute: '2-digit',
         hour12: true
-    };
-    return new Date(date).toLocaleString('ko-KR', options)
-        .replace(',', '')
-        .replace('AM', '오전')
-        .replace('PM', '오후');
+    }).replace('AM', '오전')
+      .replace('PM', '오후');
 }
 
 // 发送卡片消息
 function sendCardMessage() {
     if (!cardSettings.productImage || !cardSettings.productName) {
-        showNotification('상품 정보가 완성되지 않았습니다', 'error');
+        showNotification('상품 이미지와 상품명을 입력해주세요', 'error');
         return;
     }
-    
-    if (socket && isConnected) {
-        const cardData = {
-            productImage: cardSettings.productImage,
-            productName: cardSettings.productName,
-            price: cardSettings.subtitle1 || '',
-            tradeMethod: cardSettings.subtitle2 || '',
-            orderDate: formatDate(new Date())
-        };
 
+    const currentTime = new Date();
+    const formattedTime = formatDate(currentTime);
+    
+    const messageContent = {
+        type: 'card',
+        productImage: cardSettings.productImage,
+        productName: cardSettings.productName,
+        subtitle1: cardSettings.subtitle1,
+        subtitle2: cardSettings.subtitle2,
+        subtitle3: cardSettings.subtitle3,
+        time: formattedTime
+    };
+
+    if (isConnected) {
         socket.emit('message', {
-            type: 'card',
-            content: JSON.stringify(cardData)
+            content: JSON.stringify(messageContent),
+            type: 'text'
         });
     }
 }
@@ -450,18 +449,6 @@ function setupQuickReplyEvents() {
     const cancelQuickReplyBtn = document.getElementById('cancelQuickReply');
     const saveQuickReplyBtn = document.getElementById('saveQuickReply');
     
-    if (addQuickReplyModal) {
-        addQuickReplyModal.addEventListener('click', (e) => {
-            if (e.target === addQuickReplyModal) {
-                addQuickReplyModal.style.display = 'none';
-                const quickReplyContent = document.getElementById('quickReplyContent');
-                if (quickReplyContent) {
-                    quickReplyContent.value = '';
-                }
-            }
-        });
-    }
-
     if (cancelQuickReplyBtn) {
         cancelQuickReplyBtn.addEventListener('click', () => {
             if (addQuickReplyModal) {
@@ -482,14 +469,6 @@ function setupQuickReplyEvents() {
     const editModal = document.getElementById('editQuickReplyModal');
     const updateQuickReplyBtn = document.getElementById('updateQuickReply');
     const cancelEditQuickReplyBtn = document.getElementById('cancelEditQuickReply');
-    
-    if (editModal) {
-        editModal.addEventListener('click', (e) => {
-            if (e.target === editModal) {
-                closeEditModal();
-            }
-        });
-    }
 
     if (updateQuickReplyBtn) {
         updateQuickReplyBtn.addEventListener('click', updateQuickReply);
@@ -776,30 +755,33 @@ function appendMessage(message) {
 
     const contentElement = document.createElement('div');
 
-    if (message.type === 'card') {
-        try {
-            const cardData = JSON.parse(message.content);
+    // 尝试解析消息内容，检查是否是卡片消息
+    try {
+        const parsedContent = JSON.parse(message.content);
+        if (parsedContent.type === 'card') {
             contentElement.className = 'message-content card-message';
             contentElement.innerHTML = `
                 <div class="message-border"></div>
                 <div class="message-main">
                     <div class="product-image">
-                        <img src="${cardData.productImage}" alt="상품 이미지">
+                        <img src="${parsedContent.productImage}" alt="상품 이미지">
                     </div>
-                    <h3 class="message-title">안전거래가 시작되었습니다.</h3>
+                    <div class="message-title">${parsedContent.productName}</div>
                     <div class="message-info">
-                        <div class="info-item">·상품금액: ${cardData.price}원</div>
-                        <div class="info-item">·거래방법: ${cardData.tradeMethod}</div>
-                        <div class="info-item">·주문일시: ${cardData.orderDate}</div>
+                        <div class="info-item">${parsedContent.subtitle1}</div>
+                        <div class="info-item">${parsedContent.subtitle2}</div>
+                        <div class="info-item">${parsedContent.subtitle3}</div>
                     </div>
                     <a href="#" class="order-button">주문서 확인</a>
+                    <div class="message-time">${parsedContent.time}</div>
                 </div>
             `;
-        } catch (error) {
-            console.error('Failed to parse card data:', error);
-            contentElement.textContent = '카드 메시지 파싱 실패';
+            messageElement.appendChild(contentElement);
+        } else {
+            throw new Error('Not a card message');
         }
-    } else {
+    } catch (error) {
+        // 如果解析失败或不是卡片消息，按普通消息处理
         contentElement.className = 'message-content';
         if (message.type === 'text') {
             contentElement.textContent = message.content;
@@ -811,20 +793,22 @@ function appendMessage(message) {
             img.addEventListener('click', () => showImagePreview(message.content));
             contentElement.appendChild(img);
         }
+        
+        // 只为非卡片消息添加时间戳
+        const timeElement = document.createElement('div');
+        timeElement.className = 'message-time';
+        const messageDate = new Date(message.createdAt);
+        timeElement.textContent = messageDate.toLocaleTimeString('ko-KR', {
+            hour: 'numeric',
+            minute: '2-digit'
+        });
+        messageElement.appendChild(contentElement);
+        messageElement.appendChild(timeElement);
+        messageContainer.appendChild(messageElement);
+        return;
     }
 
-    const timeElement = document.createElement('div');
-    timeElement.className = 'message-time';
-    const messageDate = new Date(message.createdAt);
-    timeElement.textContent = messageDate.toLocaleTimeString('ko-KR', {
-        hour: 'numeric',
-        minute: '2-digit'
-    });
-
-    messageElement.appendChild(contentElement);
-    messageElement.appendChild(timeElement);
     messageContainer.appendChild(messageElement);
-
     scrollToBottom();
 }
 
@@ -964,7 +948,7 @@ function editQuickReply(side) {
 }
 
 // 打开商品信息编辑模态框
-function openProductEditModal() {
+async function openProductEditModal() {
     const modal = document.getElementById('editProductModal');
     if (!modal) {
         console.error('Product edit modal not found');
@@ -974,18 +958,34 @@ function openProductEditModal() {
     // 重置表单
     resetProductEditForm();
 
-    // 填充现有数据（如果有）
-    if (cardSettings) {
-        document.getElementById('productName').value = cardSettings.productName || '';
-        document.getElementById('subtitle1').value = cardSettings.subtitle1 || '';
-        document.getElementById('subtitle2').value = cardSettings.subtitle2 || '';
-        document.getElementById('subtitle3').value = cardSettings.subtitle3 || '';
-        
-        const imagePreview = document.getElementById('productImagePreview');
-        if (imagePreview) {
-            imagePreview.src = cardSettings.productImage || '';
-            imagePreview.style.display = cardSettings.productImage ? 'block' : 'none';
+    try {
+        // 从数据库获取商品信息
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/chat/product-info', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const productInfo = await response.json();
+            if (productInfo) {
+                // 填充表单数据
+                document.getElementById('productName').value = productInfo.productName || '';
+                document.getElementById('subtitle1').value = productInfo.subtitle1 || '';
+                document.getElementById('subtitle2').value = productInfo.subtitle2 || '';
+                document.getElementById('subtitle3').value = productInfo.subtitle3 || '';
+
+                const imagePreview = document.getElementById('productImagePreview');
+                if (imagePreview && productInfo.productImage) {
+                    imagePreview.src = productInfo.productImage;
+                    imagePreview.style.display = 'block';
+                }
+            }
         }
+    } catch (error) {
+        console.error('Failed to load product info:', error);
+        showNotification('상품 정보를 불러오지 못했습니다', 'error');
     }
 
     modal.style.display = 'flex';
@@ -1149,21 +1149,6 @@ function setupProductEditEvents() {
     cancelProductEditBtn.addEventListener('click', () => {
         editProductModal.style.display = 'none';
     });
-
-    // 点击模态框外部关闭
-    editProductModal.addEventListener('click', (e) => {
-        if (e.target === editProductModal) {
-            editProductModal.style.display = 'none';
-        }
-    });
-
-    // 阻止模态框内部点击事件冒泡
-    const modalContent = editProductModal.querySelector('.modal-content');
-    if (modalContent) {
-        modalContent.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-    }
 }
 
 // 修改右侧快捷回复的渲染函数
