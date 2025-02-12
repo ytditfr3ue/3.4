@@ -10,6 +10,7 @@ const fs = require('fs');
 const QuickReply = require('../models/QuickReply');
 const { uploadLimits } = require('../config/security');
 const { uploadValidation } = require('../middleware/security');
+const ProductInfo = require('../models/ProductInfo');
 
 // 生成带user前缀的5位随机数字ID
 function generateRoomId() {
@@ -204,6 +205,56 @@ router.delete('/quick-replies/:id', authMiddleware, async (req, res) => {
             return res.status(404).json({ message: '快捷回复不存在' });
         }
         res.json({ message: '快捷回复已删除' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// 保存商品信息
+router.post('/product-info', authMiddleware, async (req, res) => {
+    try {
+        const { productImage, productName, subtitle1, subtitle2, subtitle3, lastModified } = req.body;
+        
+        // 验证必填字段
+        if (!productImage || !productName) {
+            return res.status(400).json({ message: '상품 이미지와 상품명은 필수입니다' });
+        }
+
+        // 删除旧的商品信息
+        await ProductInfo.deleteMany({});
+
+        // 保存到数据库
+        const productInfo = new ProductInfo({
+            productImage,
+            productName,
+            subtitle1,
+            subtitle2,
+            subtitle3,
+            lastModified
+        });
+
+        await productInfo.save();
+        res.status(201).json(productInfo);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// 获取商品信息
+router.get('/product-info', async (req, res) => {
+    try {
+        const productInfo = await ProductInfo.findOne().sort({ lastModified: -1 });
+        res.json(productInfo);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// 删除商品信息
+router.delete('/product-info', authMiddleware, async (req, res) => {
+    try {
+        await ProductInfo.deleteMany({});
+        res.json({ message: '상품 정보가 삭제되었습니다' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

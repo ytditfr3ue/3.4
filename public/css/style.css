@@ -971,4 +971,116 @@ button.danger:hover {
     #roomId::placeholder {
         color: #666666;
     }
+}
+
+.message-content.card-message {
+    background: white;
+    border-radius: 12px;
+    padding: 0;
+    overflow: hidden;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.card-message .product-image {
+    width: 100%;
+    height: 200px;
+    overflow: hidden;
+    background: #f5f5f5;
+}
+
+.card-message .product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.card-message .message-content {
+    padding: 16px;
+}
+
+.card-message .product-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 12px;
+}
+
+.card-message .subtitle {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 8px;
+    padding-left: 12px;
+    position: relative;
+}
+
+.card-message .subtitle:before {
+    content: "·";
+    position: absolute;
+    left: 0;
+    color: #999;
+}
+
+.card-message .button-container {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #eee;
+}
+
+.card-message .action-button {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    background: #0aa085;
+    color: white;
+    text-align: center;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.card-message .action-button:hover {
+    background: #098d75;
+}
+
+/* 右侧快捷回复项目样式 */
+.quick-reply-section.right .quick-reply-item {
+    background: #0aa085;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+}
+
+.quick-reply-section.right .quick-reply-item:hover {
+    background: #098d75;
+}
+
+.quick-reply-section.right .quick-reply-item .reply-content {
+    flex: 1;
+    margin-right: 8px;
+}
+
+.quick-reply-section.right .quick-reply-item .edit-icon {
+    width: 16px;
+    height: 16px;
+    color: white;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    cursor: pointer;
+}
+
+.quick-reply-section.right .quick-reply-item:hover .edit-icon {
+    opacity: 1;
+}
+
+.quick-reply-section.right .quick-reply-item .edit-icon:hover {
+    transform: scale(1.1);
 } 

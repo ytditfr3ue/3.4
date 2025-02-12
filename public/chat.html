@@ -893,6 +893,249 @@
             background: #6c757d;
             color: white;
         }
+
+        /* 卡片消息样式 */
+        .message-content.card-message {
+            display: flex;
+            background: none;
+            padding: 0;
+            position: relative;
+            align-items: stretch;
+            width: 75%;
+            margin-left: 0;
+            border: none;
+        }
+
+        .message-border {
+            width: 4px;
+            background: #c5c5c5;
+            margin-right: 12px;
+            border-radius: 2px;
+            align-self: stretch;
+        }
+
+        .message-main {
+            flex: 1;
+            padding: 8px 0 8px 0;
+            background: none;
+        }
+
+        .product-image img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+
+        .message-title {
+            font-size: 22.4px;
+            color: #000000;
+            margin: 8px 0;
+            font-weight: 700;
+            letter-spacing: -0.4px;
+        }
+
+        .message-info {
+            margin: 8px 0;
+        }
+
+        .info-item {
+            font-size: 16.8px;
+            color: #666;
+            margin: 3px 0;
+            letter-spacing: 0;
+            font-weight: 500;
+        }
+
+        .order-button {
+            display: inline-block;
+            padding: 8px 16px;
+            background: #edf9f7;
+            color: #0aa085;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            margin: 8px 0;
+            width: 100%;
+            text-align: center;
+            box-sizing: border-box;
+            letter-spacing: -0.3px;
+        }
+
+        /* 响应式样式 */
+        @media screen and (max-width: 720px) {
+            .message-content.card-message {
+                width: 75%;
+            }
+            
+            .message-title {
+                font-size: 19.6px;
+            }
+            
+            .info-item {
+                font-size: 14.4px;
+            }
+            
+            .order-button {
+                font-size: 11.7px;
+                padding: 6px 12px;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            .message-content.card-message {
+                width: 85%;
+            }
+            
+            .message-border {
+                width: 3px;
+                margin-right: 8px;
+            }
+            
+            .message-main {
+                padding: 6px 0 6px 0;
+            }
+            
+            .message-title {
+                font-size: 18.2px;
+            }
+            
+            .info-item {
+                font-size: 13.2px;
+            }
+            
+            .order-button {
+                font-size: 10.8px;
+                padding: 5px 10px;
+                margin: 5px 0;
+            }
+        }
+
+        /* 右侧快捷回复项目特殊样式 */
+        .quick-reply-section.right .quick-reply-item {
+            background: #edf9f7;
+            color: #0aa085;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .quick-reply-section.right .quick-reply-item:hover {
+            background: #d4f4ef;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(10, 160, 133, 0.1);
+        }
+
+        /* 商品信息编辑模态框样式 */
+        .product-edit-form {
+            margin: 20px 0;
+            overflow-y: auto;
+            max-height: calc(80vh - 120px);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #0aa085;
+            box-shadow: 0 0 0 2px rgba(10, 160, 133, 0.1);
+        }
+
+        .image-preview-container {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .image-preview-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .change-image-btn {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(10, 160, 133, 0.9);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.2s;
+        }
+
+        .change-image-btn:hover {
+            background: rgba(10, 160, 133, 1);
+        }
+
+        .modal-content.edit-modal {
+            width: 90%;
+            max-width: 480px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            background: white;
+            border-radius: 8px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+
+        .modal-buttons button {
+            padding: 8px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modal-buttons button:hover {
+            opacity: 0.9;
+        }
+
+        #saveProductInfo {
+            background: #0aa085;
+            color: white;
+        }
+
+        #cancelProductEdit {
+            background: #6c757d;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -941,7 +1184,11 @@
                 <button onclick="addQuickReply('right')">추가</button>
                 <button onclick="editQuickReply('right')">편집</button>
             </div>
-            <div class="quick-reply-list right-replies"></div>
+            <div class="quick-reply-list right-replies">
+                <div class="quick-reply-item" data-content="상품정보">
+                    <span class="reply-content">상품정보</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -970,6 +1217,42 @@
             <div class="modal-buttons">
                 <button id="updateQuickReply">저장</button>
                 <button id="cancelEditQuickReply" class="cancel-btn">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 商品信息编辑模态框 -->
+    <div id="editProductModal" class="modal">
+        <div class="modal-content edit-modal">
+            <h3>상품정보 편집</h3>
+            <div class="product-edit-form">
+                <div class="form-group">
+                    <label>상품 이미지</label>
+                    <div class="image-preview-container">
+                        <img id="productImagePreview" src="" alt="상품 이미지">
+                        <button id="changeProductImage" class="change-image-btn">이미지 선택</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>상품명</label>
+                    <input type="text" id="productName" placeholder="상품명을 입력하세요">
+                </div>
+                <div class="form-group">
+                    <label>소제목 1</label>
+                    <input type="text" id="subtitle1" placeholder="소제목 1을 입력하세요">
+                </div>
+                <div class="form-group">
+                    <label>소제목 2</label>
+                    <input type="text" id="subtitle2" placeholder="소제목 2를 입력하세요">
+                </div>
+                <div class="form-group">
+                    <label>소제목 3</label>
+                    <input type="text" id="subtitle3" placeholder="소제목 3을 입력하세요">
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button id="saveProductInfo">확인</button>
+                <button id="cancelProductEdit" class="cancel-btn">취소</button>
             </div>
         </div>
     </div>

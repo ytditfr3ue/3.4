@@ -12,7 +12,7 @@ const messageSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['text', 'image'],
+    enum: ['text', 'image', 'card'],
     required: true
   },
   sender: {

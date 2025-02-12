@@ -66,6 +66,55 @@ let onlineCount = 0;
 let isDeleteMode = false;
 let selectedReplies = new Set();
 
+// 卡片设置
+let cardSettings = {
+    productImage: '',
+    productName: '',
+    subtitle1: '',
+    subtitle2: '',
+    subtitle3: '',
+    lastModified: null
+};
+
+// 格式化日期
+function formatDate(date) {
+    const options = {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    };
+    return new Date(date).toLocaleString('ko-KR', options)
+        .replace(',', '')
+        .replace('AM', '오전')
+        .replace('PM', '오후');
+}
+
+// 发送卡片消息
+function sendCardMessage() {
+    if (!cardSettings.productImage || !cardSettings.productName) {
+        showNotification('상품 정보가 완성되지 않았습니다', 'error');
+        return;
+    }
+    
+    if (socket && isConnected) {
+        const cardData = {
+            productImage: cardSettings.productImage,
+            productName: cardSettings.productName,
+            price: cardSettings.subtitle1 || '',
+            tradeMethod: cardSettings.subtitle2 || '',
+            orderDate: formatDate(new Date())
+        };
+
+        socket.emit('message', {
+            type: 'card',
+            content: JSON.stringify(cardData)
+        });
+    }
+}
+
 // 初始显示加载页面（仅用户）
 if (!isAdmin) {
     showLoadingPage();
@@ -121,13 +170,35 @@ async function init() {
         // 连接Socket
         connectSocket();
 
-        // 如果是管理员，加载快捷回复
+        // 如果是管理员，加载快捷回复和商品信息
         if (isAdmin) {
             try {
                 await loadQuickReplies();
+                
+                // 加载保存的商品信息
+                const token = localStorage.getItem('token');
+                const productInfoResponse = await fetch('/api/chat/product-info', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (productInfoResponse.ok) {
+                    const productInfo = await productInfoResponse.json();
+                    if (productInfo) {
+                        cardSettings = {
+                            productImage: productInfo.productImage || '',
+                            productName: productInfo.productName || '',
+                            subtitle1: productInfo.subtitle1 || '',
+                            subtitle2: productInfo.subtitle2 || '',
+                            subtitle3: productInfo.subtitle3 || '',
+                            lastModified: productInfo.lastModified || null
+                        };
+                    }
+                }
             } catch (error) {
-                console.error('Failed to load quick replies:', error);
-                showNotification('빠른 답장을 로드하지 못했습니다', 'error');
+                console.error('Failed to load quick replies or product info:', error);
+                showNotification('데이터를 로드하지 못했습니다', 'error');
             }
         }
 
@@ -142,6 +213,14 @@ async function init() {
             onlineCountElement.textContent = '현재 접속자 수: 0명';
             document.body.appendChild(onlineCountElement);
         }
+
+        // 设置商品编辑相关事件监听
+        if (isAdmin) {
+            setupProductEditEvents();
+        }
+
+        // 初始化右侧快捷回复
+        renderRightQuickReplies();
 
     } catch (error) {
         console.error('초기화 실패:', error);
@@ -469,6 +548,16 @@ function renderQuickReplies(replies, container) {
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
             </svg>
         `;
+
+        // 添加编辑图标点击事件
+        const editIcon = div.querySelector('.edit-icon');
+        if (editIcon) {
+            editIcon.addEventListener('click', (e) => {
+                e.stopPropagation(); // 阻止事件冒泡
+                openEditModal(reply._id, reply.content);
+            });
+        }
+
         container.appendChild(div);
     });
 }
@@ -490,13 +579,18 @@ function handleQuickReplyClick(e) {
         return;
     }
 
-    // 如果点击的是编辑图标
-    if (e.target.closest('.edit-icon')) {
-        openEditModal(item.dataset.id, item.dataset.content);
+    // 检查是否是右侧快捷回复区（卡片消息）
+    if (item.closest('.quick-reply-section.right')) {
+        if (!cardSettings.productImage || !cardSettings.productName) {
+            showNotification('상품 이미지와 상품명을 입력해주세요', 'error');
+            openProductEditModal();
+            return;
+        }
+        sendCardMessage();
         return;
     }
 
-    // 点击内容区域发送消息
+    // 普通文本消息处理
     const content = item.dataset.content;
     if (content && isConnected) {
         socket.emit('message', {
@@ -675,32 +769,55 @@ function appendMessage(message) {
     
     // 根据聊天室类型和发送者决定消息位置
     if (!isAdmin) {
-        // 用户聊天室：用户消息靠右，管理员消息靠左
         messageElement.className = `message ${message.sender === 'user' ? 'self' : 'other'}`;
     } else {
-        // 管理员聊天室：管理员消息靠右，用户消息靠左
         messageElement.className = `message ${message.sender === 'admin' ? 'self' : 'other'}`;
     }
 
     const contentElement = document.createElement('div');
-    contentElement.className = 'message-content';
 
-    if (message.type === 'text') {
-        contentElement.textContent = message.content;
-    } else if (message.type === 'image') {
-        const img = document.createElement('img');
-        img.src = message.content;
-        img.alt = '이미지';
-        img.addEventListener('load', scrollToBottom);
-        img.addEventListener('click', () => showImagePreview(message.content));
-        contentElement.appendChild(img);
+    if (message.type === 'card') {
+        try {
+            const cardData = JSON.parse(message.content);
+            contentElement.className = 'message-content card-message';
+            contentElement.innerHTML = `
+                <div class="message-border"></div>
+                <div class="message-main">
+                    <div class="product-image">
+                        <img src="${cardData.productImage}" alt="상품 이미지">
+                    </div>
+                    <h3 class="message-title">안전거래가 시작되었습니다.</h3>
+                    <div class="message-info">
+                        <div class="info-item">·상품금액: ${cardData.price}원</div>
+                        <div class="info-item">·거래방법: ${cardData.tradeMethod}</div>
+                        <div class="info-item">·주문일시: ${cardData.orderDate}</div>
+                    </div>
+                    <a href="#" class="order-button">주문서 확인</a>
+                </div>
+            `;
+        } catch (error) {
+            console.error('Failed to parse card data:', error);
+            contentElement.textContent = '카드 메시지 파싱 실패';
+        }
+    } else {
+        contentElement.className = 'message-content';
+        if (message.type === 'text') {
+            contentElement.textContent = message.content;
+        } else if (message.type === 'image') {
+            const img = document.createElement('img');
+            img.src = message.content;
+            img.alt = '이미지';
+            img.addEventListener('load', scrollToBottom);
+            img.addEventListener('click', () => showImagePreview(message.content));
+            contentElement.appendChild(img);
+        }
     }
 
     const timeElement = document.createElement('div');
     timeElement.className = 'message-time';
     const messageDate = new Date(message.createdAt);
     timeElement.textContent = messageDate.toLocaleTimeString('ko-KR', {
-        hour: '2-digit',
+        hour: 'numeric',
         minute: '2-digit'
     });
 
@@ -824,6 +941,267 @@ function showChatPage() {
             chatPage.style.opacity = '1';
         }, 50);
     }, 300);
+}
+
+// 添加右侧快捷回复
+function addQuickReply(side) {
+    if (side === 'right') {
+        const rightRepliesList = document.querySelector('.quick-reply-list.right-replies');
+        const newReply = document.createElement('div');
+        newReply.className = 'quick-reply-item';
+        newReply.dataset.content = '상품정보';
+        newReply.innerHTML = `<span class="reply-content">상품정보</span>`;
+        rightRepliesList.appendChild(newReply);
+    }
+}
+
+// 编辑右侧快捷回复
+function editQuickReply(side) {
+    if (side === 'right') {
+        // 暂时不需要实现编辑功能，因为右侧只有固定的商品信息卡片
+        return;
+    }
+}
+
+// 打开商品信息编辑模态框
+function openProductEditModal() {
+    const modal = document.getElementById('editProductModal');
+    if (!modal) {
+        console.error('Product edit modal not found');
+        return;
+    }
+
+    // 重置表单
+    resetProductEditForm();
+
+    // 填充现有数据（如果有）
+    if (cardSettings) {
+        document.getElementById('productName').value = cardSettings.productName || '';
+        document.getElementById('subtitle1').value = cardSettings.subtitle1 || '';
+        document.getElementById('subtitle2').value = cardSettings.subtitle2 || '';
+        document.getElementById('subtitle3').value = cardSettings.subtitle3 || '';
+        
+        const imagePreview = document.getElementById('productImagePreview');
+        if (imagePreview) {
+            imagePreview.src = cardSettings.productImage || '';
+            imagePreview.style.display = cardSettings.productImage ? 'block' : 'none';
+        }
+    }
+
+    modal.style.display = 'flex';
+}
+
+// 重置商品编辑表单
+function resetProductEditForm() {
+    const form = document.querySelector('.product-edit-form');
+    if (!form) return;
+
+    // 重置所有输入字段
+    form.querySelectorAll('input[type="text"]').forEach(input => {
+        input.value = '';
+    });
+    
+    // 重置图片预览
+    const imagePreview = document.getElementById('productImagePreview');
+    if (imagePreview) {
+        imagePreview.src = '';
+        imagePreview.style.display = 'none';
+    }
+}
+
+// 保存商品信息
+async function saveProductInfo() {
+    const imagePreview = document.getElementById('productImagePreview');
+    const productName = document.getElementById('productName').value.trim();
+    const subtitle1 = document.getElementById('subtitle1').value.trim();
+    const subtitle2 = document.getElementById('subtitle2').value.trim();
+    const subtitle3 = document.getElementById('subtitle3').value.trim();
+    
+    if (!imagePreview.src || !productName) {
+        showNotification('상품 이미지와 상품명을 입력해주세요', 'error');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            showNotification('인증이 필요합니다', 'error');
+            return;
+        }
+
+        // 验证token是否有效
+        const verifyResponse = await fetch('/api/auth/verify', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        const verifyData = await verifyResponse.json();
+        if (!verifyData.isValid) {
+            localStorage.removeItem('token');
+            showNotification('인증이 만료되었습니다', 'error');
+            return;
+        }
+
+        // 直接保存新的商品信息
+        const createResponse = await fetch('/api/chat/product-info', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                productImage: imagePreview.src,
+                productName: productName,
+                subtitle1: subtitle1,
+                subtitle2: subtitle2,
+                subtitle3: subtitle3,
+                lastModified: new Date().toISOString()
+            })
+        });
+
+        if (!createResponse.ok) {
+            const errorData = await createResponse.json().catch(() => ({}));
+            throw new Error(errorData.message || '상품 정보 저장 실패');
+        }
+
+        const savedData = await createResponse.json();
+
+        // 更新本地状态
+        cardSettings = {
+            productImage: savedData.productImage,
+            productName: savedData.productName,
+            subtitle1: savedData.subtitle1,
+            subtitle2: savedData.subtitle2,
+            subtitle3: savedData.subtitle3,
+            lastModified: savedData.lastModified
+        };
+        
+        // 关闭模态框
+        const editModal = document.getElementById('editProductModal');
+        if (editModal) {
+            editModal.style.display = 'none';
+        }
+
+        showNotification('상품 정보가 저장되었습니다');
+    } catch (error) {
+        console.error('Failed to save product info:', error);
+        showNotification(error.message || '저장 실패', 'error');
+    }
+}
+
+// 处理商品图片更改
+async function handleProductImageChange() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    
+    input.onchange = async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('image', file);
+
+            const response = await fetch('/api/chat/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                const imagePreview = document.getElementById('productImagePreview');
+                if (imagePreview) {
+                    imagePreview.src = data.imageUrl;
+                    imagePreview.style.display = 'block';
+                }
+            } else {
+                showNotification('이미지 업로드 실패', 'error');
+            }
+        } catch (error) {
+            console.error('Failed to upload image:', error);
+            showNotification('이미지 업로드 실패', 'error');
+        }
+    };
+
+    input.click();
+}
+
+// 设置商品编辑相关事件监听
+function setupProductEditEvents() {
+    const editProductModal = document.getElementById('editProductModal');
+    const changeProductImageBtn = document.getElementById('changeProductImage');
+    const saveProductInfoBtn = document.getElementById('saveProductInfo');
+    const cancelProductEditBtn = document.getElementById('cancelProductEdit');
+
+    if (!editProductModal || !changeProductImageBtn || !saveProductInfoBtn || !cancelProductEditBtn) {
+        console.error('Product edit modal elements not found');
+        return;
+    }
+
+    // 图片更改按钮事件
+    changeProductImageBtn.addEventListener('click', handleProductImageChange);
+
+    // 保存按钮事件
+    saveProductInfoBtn.addEventListener('click', saveProductInfo);
+
+    // 取消按钮事件
+    cancelProductEditBtn.addEventListener('click', () => {
+        editProductModal.style.display = 'none';
+    });
+
+    // 点击模态框外部关闭
+    editProductModal.addEventListener('click', (e) => {
+        if (e.target === editProductModal) {
+            editProductModal.style.display = 'none';
+        }
+    });
+
+    // 阻止模态框内部点击事件冒泡
+    const modalContent = editProductModal.querySelector('.modal-content');
+    if (modalContent) {
+        modalContent.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+}
+
+// 修改右侧快捷回复的渲染函数
+function renderRightQuickReplies() {
+    const rightRepliesList = document.querySelector('.quick-reply-list.right-replies');
+    if (!rightRepliesList) return;
+    
+    rightRepliesList.innerHTML = `
+        <div class="quick-reply-item" data-content="상품정보">
+            <span class="reply-content">상품정보</span>
+            <svg class="edit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+        </div>
+    `;
+
+    // 添加编辑图标点击事件
+    const editIcon = rightRepliesList.querySelector('.edit-icon');
+    if (editIcon) {
+        editIcon.addEventListener('click', (e) => {
+            e.stopPropagation(); // 阻止事件冒泡
+            openProductEditModal();
+        });
+    }
+
+    // 添加快捷回复项点击事件
+    const quickReplyItem = rightRepliesList.querySelector('.quick-reply-item');
+    if (quickReplyItem) {
+        quickReplyItem.addEventListener('click', () => {
+            if (!cardSettings.productImage || !cardSettings.productName) {
+                showNotification('상품 이미지와 상품명을 입력해주세요', 'error');
+                openProductEditModal();
+                return;
+            }
+            sendCardMessage();
+        });
+    }
 }
 
 // 初始化
