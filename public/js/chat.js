@@ -97,8 +97,24 @@ let cardSettings = {
 
 // 格式化日期
 function formatDate(date) {
-    const d = new Date(date);
-    return `${d.getFullYear()}년${d.getMonth() + 1}월${d.getDate()}일`;
+    // 创建一个表示首尔时区的日期对象
+    const seoulDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+    
+    // 格式化年月日
+    const year = seoulDate.getFullYear();
+    const month = seoulDate.getMonth() + 1;
+    const day = seoulDate.getDate();
+    const hours = seoulDate.getHours();
+    const minutes = seoulDate.getMinutes();
+
+    // 根据消息类型返回不同格式
+    if (arguments.callee.caller.name === 'addWelcomeMessage') {
+        // 欢迎消息只显示年月日
+        return `${year}년${month}월${day}일`;
+    } else {
+        // 普通消息显示时分
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    }
 }
 
 // 发送卡片消息
@@ -118,7 +134,8 @@ function sendCardMessage() {
         subtitle1: cardSettings.subtitle1,
         subtitle2: cardSettings.subtitle2,
         subtitle3: cardSettings.subtitle3,
-        time: formattedTime
+        time: formattedTime,
+        isChecked: false
     };
 
     if (isConnected) {
@@ -764,7 +781,6 @@ async function uploadImage() {
 function appendMessage(message) {
     const messageElement = document.createElement('div');
     
-    // 根据聊天室类型和发送者决定消息位置
     if (!isAdmin) {
         messageElement.className = `message ${message.sender === 'user' ? 'self' : 'other'}`;
     } else {
@@ -773,10 +789,13 @@ function appendMessage(message) {
 
     const contentElement = document.createElement('div');
 
-    // 尝试解析消息内容，检查是否是卡片消息
     try {
         const parsedContent = JSON.parse(message.content);
         if (parsedContent.type === 'card') {
+            // 从localStorage获取按钮状态
+            const buttonStates = JSON.parse(localStorage.getItem('buttonStates') || '{}');
+            const isChecked = buttonStates[message._id] || false;
+
             contentElement.className = 'message-content card-message';
             contentElement.innerHTML = `
                 <div class="message-border"></div>
@@ -790,10 +809,28 @@ function appendMessage(message) {
                         <div class="info-item">${parsedContent.subtitle2}</div>
                         <div class="info-item">${parsedContent.subtitle3}</div>
                     </div>
-                    <a href="#" class="order-button">주문서 확인</a>
+                    <button class="order-button ${isChecked ? 'checked' : ''}">${isChecked ? '확인' : '주문서 확인'}</button>
                     <div class="message-time">${parsedContent.time}</div>
                 </div>
             `;
+
+            // 添加按钮点击事件
+            const orderButton = contentElement.querySelector('.order-button');
+            if (orderButton) {
+                orderButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (!this.classList.contains('checked')) {
+                        this.classList.add('checked');
+                        this.textContent = '확인';
+                        
+                        // 保存状态到localStorage
+                        const buttonStates = JSON.parse(localStorage.getItem('buttonStates') || '{}');
+                        buttonStates[message._id] = true;
+                        localStorage.setItem('buttonStates', JSON.stringify(buttonStates));
+                    }
+                });
+            }
+
             messageElement.appendChild(contentElement);
         } else {
             throw new Error('Not a card message');
@@ -815,11 +852,7 @@ function appendMessage(message) {
         // 只为非卡片消息添加时间戳
         const timeElement = document.createElement('div');
         timeElement.className = 'message-time';
-        const messageDate = new Date(message.createdAt);
-        timeElement.textContent = messageDate.toLocaleTimeString('ko-KR', {
-            hour: 'numeric',
-            minute: '2-digit'
-        });
+        timeElement.textContent = formatDate(new Date(message.createdAt));
         messageElement.appendChild(contentElement);
         messageElement.appendChild(timeElement);
         messageContainer.appendChild(messageElement);

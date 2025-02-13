@@ -947,7 +947,7 @@
 
         .order-button {
             display: inline-block;
-            padding: calc(8px * 1.15) 16px;  /* 增加高度到1.15倍 */
+            padding: calc(8px * 1.15) 16px;
             background: #edf9f7;
             color: #0aa085;
             border-radius: 4px;
@@ -955,11 +955,27 @@
             font-size: 13px;
             font-weight: 600;
             margin: 8px 0 4px 0;
-            width: 92%;  /* 增加宽度到原来的1.15倍 (80% * 1.15 ≈ 92%) */
+            width: 92%;
             text-align: center;
             box-sizing: border-box;
             letter-spacing: -0.3px;
-            margin-left: 4%;  /* 调整左边距使按钮居中 */
+            margin-left: 4%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+        }
+
+        .order-button.checked {
+            background: #0aa085;
+            color: white;
+        }
+
+        .order-button.checked::before {
+            content: "✓";
+            margin-right: 6px;
+            font-size: 14px;
+            position: relative;
+            top: 0.5px;
         }
 
         .message-time {
