@@ -112,8 +112,10 @@ function formatDate(date) {
         // 欢迎消息只显示年月日
         return `${year}년${month}월${day}일`;
     } else {
-        // 普通消息显示时分
-        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        // 普通消息显示时分（韩国格式：오전/오후）
+        const ampm = hours < 12 ? '오전' : '오후';
+        const displayHours = hours % 12 || 12; // 转换为12小时制
+        return `${ampm}${displayHours}:${minutes.toString().padStart(2, '0')}`;
     }
 }
 
