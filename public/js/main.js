@@ -199,20 +199,62 @@ async function loadRooms() {
         });
         const rooms = await response.json();
         
-        roomsList.innerHTML = rooms.map(room => `
-            <div class="room-item" data-room-id="${room._id}">
-                <div class="room-info">
-                    <h4>${room.name}</h4>
-                    <p class="room-id">ID: ${room.roomId}</p>
-                    <p class="online-count">접속자 수: ${room.onlineCount}명</p>
+        // 检查并创建支付模态框
+        if (!document.getElementById('paymentModal')) {
+            const modalHtml = `
+                <div id="paymentModal" class="modal hidden">
+                    <div class="modal-content payment-modal">
+                        <div class="modal-header">
+                            <h3>결제 관리</h3>
+                        </div>
+                        <div class="modal-body">
+                            <div class="payment-form">
+                                <div class="form-group">
+                                    <input type="text" id="title1" placeholder="제목 1" class="payment-input">
+                                </div>
+                                <div class="form-group">
+                                    <input type="text" id="title2" placeholder="제목 2" class="payment-input">
+                                </div>
+                                <div class="form-group">
+                                    <input type="text" id="title3" placeholder="제목 3" class="payment-input">
+                                </div>
+                                <div class="form-group">
+                                    <input type="text" id="title4" placeholder="제목 4" class="payment-input">
+                                </div>
+                                <div class="form-group">
+                                    <input type="text" id="title5" placeholder="제목 5" class="payment-input">
+                                </div>
+                            </div>
+                            <div class="modal-buttons">
+                                <button id="savePaymentBtn" class="save-btn">저장</button>
+                                <button id="cancelPaymentBtn" class="cancel-btn" onclick="closePaymentModal()">취소</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // 添加事件监听器
+            document.getElementById('savePaymentBtn').addEventListener('click', savePaymentTitles);
+            document.getElementById('cancelPaymentBtn').addEventListener('click', closePaymentModal);
+        }
+        
+        // 添加房间列表内容
+        roomsList.innerHTML = `
+            ${rooms.map(room => `
+                <div class="room-item">
+                    <div class="room-info">
+                        <h3>${room.name}</h3>
+                        <p class="room-id">${room.roomId}</p>
+                        <p class="online-count">접속자 수: ${room.onlineCount}명</p>
+                    </div>
+                    <div class="room-actions">
+                        <button onclick="copyRoomLink('${room.roomId}', 'admin')" class="btn btn-admin-link">관리자 링크</button>
+                        <button onclick="copyRoomLink('${room.roomId}', 'user')" class="btn btn-user-link">사용자 링크</button>
+                        <button onclick="deleteRoom('${room._id}')" class="btn btn-danger">삭제</button>
+                    </div>
                 </div>
-                <div class="room-actions">
-                    <button onclick="copyRoomLink('${room.roomId}', 'admin')" class="copy-admin-link">관리자 링크</button>
-                    <button onclick="copyRoomLink('${room.roomId}', 'user')" class="copy-user-link">사용자 링크</button>
-                    <button onclick="deleteRoom('${room._id}')" class="delete-room">삭제</button>
-                </div>
-            </div>
-        `).join('');
+            `).join('')}`;
     } catch (error) {
         console.error('Load rooms failed:', error);
         showNotification('채팅방 목록을 불러오지 못했습니다', 'error');
@@ -237,9 +279,7 @@ roomsList.addEventListener('click', (e) => {
 // 复制聊天室链接
 async function copyRoomLink(roomId, type) {
     const button = event.target;
-    const originalText = button.textContent;
     button.disabled = true;
-    button.textContent = '복사중...';
 
     const baseUrl = window.location.origin;
     const storedPassword = localStorage.getItem('adminPassword');
@@ -250,8 +290,9 @@ async function copyRoomLink(roomId, type) {
     try {
         if (navigator.clipboard && window.isSecureContext) {
             await navigator.clipboard.writeText(link);
-            button.textContent = '복사됨!';
-            showNotification('링크가 복사되었습니다');
+            showNotification(type === 'admin' 
+                ? `${roomId} 관리자 링크 복사성공`
+                : `${roomId} 사용자 링크 복사성공`);
         } else {
             // 回退方案：创建临时输入框
             const textArea = document.createElement('textarea');
@@ -266,14 +307,14 @@ async function copyRoomLink(roomId, type) {
             try {
                 const successful = document.execCommand('copy');
                 if (successful) {
-                    button.textContent = '복사됨!';
-                    showNotification('링크가 복사되었습니다');
+                    showNotification(type === 'admin' 
+                        ? `${roomId} 관리자 링크 복사성공`
+                        : `${roomId} 사용자 링크 복사성공`);
                 } else {
                     throw new Error('복사 실패');
                 }
             } catch (err) {
                 console.error('Failed to copy text:', err);
-                button.textContent = '복사 실패';
                 showNotification('복사 실패, 수동으로 복사해주세요', 'error');
             } finally {
                 textArea.remove();
@@ -281,45 +322,51 @@ async function copyRoomLink(roomId, type) {
         }
     } catch (err) {
         console.error('Failed to copy text:', err);
-        button.textContent = '복사 실패';
         showNotification('복사 실패, 수동으로 복사해주세요', 'error');
     } finally {
         setTimeout(() => {
             button.disabled = false;
-            button.textContent = originalText;
-        }, 1500);
+        }, 500);
     }
+}
+
+// 修改模态框显示/隐藏逻辑
+function showModal(modal) {
+    modal.style.display = 'flex';
+    modal.classList.remove('hidden');
+}
+
+function hideModal(modal) {
+    modal.style.display = 'none';
+    modal.classList.add('hidden');
 }
 
 // 删除聊天室
 function deleteRoom(roomId) {
-    const roomElement = document.querySelector(`[data-room-id="${roomId}"]`);
-    if (!roomElement) {
-        console.error('Room element not found');
-        showNotification('채팅방을 찾을 수 없습니다', 'error');
-        return;
+    try {
+        const button = event.target;
+        const roomItemElement = button.closest('.room-item');
+        
+        if (!roomItemElement) {
+            throw new Error('채팅방을 찾을 수 없습니다');
+        }
+        
+        const roomNameElement = roomItemElement.querySelector('h3');
+        if (!roomNameElement) {
+            throw new Error('채팅방 이름을 찾을 수 없습니다');
+        }
+        
+        roomToDelete = roomId;
+        roomToDeleteName = roomNameElement.textContent;
+        
+        deleteRoomNameSpan.textContent = roomToDeleteName;
+        showModal(deleteConfirmModal);
+        confirmDeleteBtn.focus();
+        
+    } catch (error) {
+        console.error('Delete room error:', error);
+        showNotification(error.message || '채팅방 삭제 중 오류가 발생했습니다', 'error');
     }
-    
-    const roomItemElement = roomElement.closest('.room-item');
-    if (!roomItemElement) {
-        console.error('Room item element not found');
-        showNotification('채팅방 정보를 찾을 수 없습니다', 'error');
-        return;
-    }
-    
-    const roomNameElement = roomItemElement.querySelector('h4');
-    if (!roomNameElement) {
-        console.error('Room name element not found');
-        showNotification('채팅방 이름을 찾을 수 없습니다', 'error');
-        return;
-    }
-    
-    roomToDelete = roomId;
-    roomToDeleteName = roomNameElement.textContent;
-    
-    deleteRoomNameSpan.textContent = roomToDeleteName;
-    deleteConfirmModal.classList.remove('hidden');
-    confirmDeleteBtn.focus();
 }
 
 // 确认删除聊天室
@@ -364,7 +411,7 @@ async function confirmDeleteRoom() {
 
 // 关闭删除模态框
 function closeDeleteModal() {
-    deleteConfirmModal.classList.add('hidden');
+    hideModal(deleteConfirmModal);
     roomToDelete = null;
     roomToDeleteName = '';
 }
@@ -390,21 +437,32 @@ document.addEventListener('keydown', (e) => {
 });
 
 // 点击模态框背景关闭
-deleteConfirmModal.addEventListener('click', (e) => {
-    if (e.target === deleteConfirmModal) {
-        cancelDeleteRoom();
-    }
+document.querySelectorAll('.modal').forEach(modal => {
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            hideModal(modal);
+        }
+    });
 });
 
 // 显示通知
 function showNotification(message, type = 'success') {
+    // 移除所有现有的通知
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notification => notification.remove());
+
+    // 创建新通知
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.textContent = message;
+    
+    // 添加到页面
     document.body.appendChild(notification);
 
+    // 3秒后移除通知
     setTimeout(() => {
-        notification.remove();
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
 
@@ -421,7 +479,7 @@ function showAdminPage() {
 
 // 修改账号密码相关事件监听
 changeCredentialsBtn.addEventListener('click', () => {
-    changeCredentialsModal.classList.remove('hidden');
+    showModal(changeCredentialsModal);
 });
 
 changeCredentialsForm.addEventListener('submit', async (e) => {
@@ -448,7 +506,7 @@ changeCredentialsForm.addEventListener('submit', async (e) => {
 
         if (response.ok) {
             showNotification('계정 정보가 변경되었습니다. 새로운 비밀번호로 다시 로그인해주세요.');
-            changeCredentialsModal.classList.add('hidden');
+            hideModal(changeCredentialsModal);
             changeCredentialsForm.reset();
             // 修改成功后退出登录
             localStorage.removeItem('token');
@@ -465,7 +523,7 @@ changeCredentialsForm.addEventListener('submit', async (e) => {
 
 // 取消修改账号密码
 document.getElementById('cancelCredentialsBtn').addEventListener('click', () => {
-    document.getElementById('changeCredentialsModal').classList.add('hidden');
+    hideModal(changeCredentialsModal);
 });
 
 // 加载安全日志
@@ -551,13 +609,13 @@ function formatDate(dateStr) {
 
 // 事件监听
 securityLogsBtn.addEventListener('click', () => {
-    securityLogsModal.classList.remove('hidden');
+    showModal(securityLogsModal);
     loadSecurityLogs();
     loadBannedIPs();
 });
 
 closeSecurityLogsBtn.addEventListener('click', () => {
-    securityLogsModal.classList.add('hidden');
+    hideModal(securityLogsModal);
 });
 
 logTypeFilter.addEventListener('change', loadSecurityLogs);
@@ -567,12 +625,122 @@ refreshLogsBtn.addEventListener('click', () => {
     loadBannedIPs();
 });
 
-// 点击模态框背景关闭
-securityLogsModal.addEventListener('click', (e) => {
-    if (e.target === securityLogsModal) {
-        securityLogsModal.classList.add('hidden');
+// 显示支付模态框
+async function showPaymentModal() {
+    // 首先检查认证状态
+    if (!token) {
+        showNotification('로그인이 필요합니다', 'error');
+        showLoginPage();
+        return;
     }
-});
+
+    try {
+        // 验证 token
+        const verifyResponse = await fetch('/api/auth/verify', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        const verifyData = await verifyResponse.json();
+
+        if (!verifyData.isValid) {
+            localStorage.removeItem('token');
+            showNotification('세션이 만료되었습니다. 다시 로그인해주세요', 'error');
+            showLoginPage();
+            return;
+        }
+
+        // token 有效，显示支付模态框
+        const paymentModal = document.getElementById('paymentModal');
+        if (paymentModal) {
+            // 加载现有数据
+            loadPaymentTitles();
+            paymentModal.classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Auth verification failed:', error);
+        showNotification('인증 확인 중 오류가 발생했습니다', 'error');
+    }
+}
+
+// 保存支付标题
+async function savePaymentTitles() {
+    const titles = {
+        title1: document.getElementById('title1').value,
+        title2: document.getElementById('title2').value,
+        title3: document.getElementById('title3').value,
+        title4: document.getElementById('title4').value,
+        title5: document.getElementById('title5').value
+    };
+
+    try {
+        const response = await fetch('/api/chat/payment/titles', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(titles)
+        });
+
+        if (response.ok) {
+            showNotification('결제 정보가 저장되었습니다');
+            closePaymentModal();
+        } else {
+            const data = await response.json();
+            throw new Error(data.message || '저장 실패');
+        }
+    } catch (error) {
+        console.error('Save payment titles failed:', error);
+        showNotification('저장 실패: ' + error.message, 'error');
+    }
+}
+
+// 加载支付标题
+async function loadPaymentTitles() {
+    try {
+        const response = await fetch('/api/chat/payment/titles', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            // 填充输入框
+            if (data.settings) {
+                document.getElementById('title1').value = data.settings.title1 || '';
+                document.getElementById('title2').value = data.settings.title2 || '';
+                document.getElementById('title3').value = data.settings.title3 || '';
+                document.getElementById('title4').value = data.settings.title4 || '';
+                document.getElementById('title5').value = data.settings.title5 || '';
+            }
+        }
+    } catch (error) {
+        console.error('Load payment titles failed:', error);
+        showNotification('결제 정보를 불러오지 못했습니다', 'error');
+    }
+}
+
+// 关闭支付模态框
+function closePaymentModal() {
+    const paymentModal = document.getElementById('paymentModal');
+    if (paymentModal) {
+        paymentModal.classList.add('hidden');
+    }
+}
 
 // 初始化
-checkAuth(); 
+async function init() {
+    // 确保所有模态框初始状态为隐藏
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        modal.style.display = 'none';
+    });
+    
+    // 检查认证状态
+    await checkAuth();
+}
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', init); 

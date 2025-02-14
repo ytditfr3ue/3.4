@@ -29,6 +29,8 @@ const {
     requestSanitizer,
     resourceTokenHandler
 } = require('./middleware/advancedSecurity');
+const mongoose = require('mongoose');
+const chatRoutes = require('./routes/chat');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -51,9 +53,6 @@ if (!fs.existsSync(logsDir)) {
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir);
 }
-
-// Connect to MongoDB
-connectDB();
 
 // 基础中间件
 app.use(cors());
@@ -148,11 +147,10 @@ const socketHandler = require('./socket')(io);
 app.use('/api/auth', require('./routes/auth'));
 
 // 注入socketHandler到路由
-const chatRouter = require('./routes/chat');
 app.use('/api/chat', (req, res, next) => {
     req.socketHandler = socketHandler;
     next();
-}, chatRouter);
+}, chatRoutes);
 
 // 资源访问令牌路由
 app.post('/api/resource-token', createRateLimiter(rateLimits.general), resourceTokenHandler);
@@ -220,7 +218,36 @@ console.log(`- PORT: ${PORT}`);
 console.log(`- NODE_ENV: ${process.env.NODE_ENV}`);
 console.log(`- Platform: ${process.platform}`);
 
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on port ${PORT}`);
-    console.log(`Server is listening on all network interfaces (0.0.0.0:${PORT})`);
+// 修改服务器启动代码
+const startServer = async () => {
+    try {
+        // 首先连接数据库
+        await connectDB();
+        
+        // 然后启动服务器
+        server.listen(PORT, '0.0.0.0', () => {
+            console.log(`Server is running on port ${PORT}`);
+            console.log(`Server is listening on all network interfaces (0.0.0.0:${PORT})`);
+        });
+    } catch (error) {
+        console.error('Failed to start server:', error);
+        process.exit(1);
+    }
+};
+
+startServer();
+
+// Socket.IO 连接处理
+io.on('connection', socket => {
+    console.log('New client connected');
+
+    socket.on('disconnect', () => {
+        console.log('Client disconnected');
+    });
+});
+
+// 错误处理中间件
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ message: '서버 오류가 발생했습니다' });
 }); 

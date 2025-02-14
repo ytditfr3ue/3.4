@@ -11,6 +11,7 @@ const QuickReply = require('../models/QuickReply');
 const { uploadLimits } = require('../config/security');
 const { uploadValidation } = require('../middleware/security');
 const ProductInfo = require('../models/ProductInfo');
+const PaymentInfo = require('../models/PaymentInfo');
 
 // 生成带user前缀的5位随机数字ID
 function generateRoomId() {
@@ -175,88 +176,307 @@ router.post('/upload', (req, res) => {
     });
 });
 
-// 获取快捷回复
-router.get('/quick-replies', async (req, res) => {
+// 左侧快捷回复 API
+router.get('/quick-replies/left', authMiddleware, async (req, res) => {
     try {
-        const replies = await QuickReply.find().sort({ createdAt: -1 });
+        const replies = await QuickReply.find({ type: 'left' }).sort('-createdAt');
         res.json(replies);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: '서버 오류가 발생했습니다' });
     }
 });
 
-// 添加快捷回复
-router.post('/quick-replies', authMiddleware, async (req, res) => {
+router.post('/quick-replies/left', authMiddleware, async (req, res) => {
     try {
         const { content } = req.body;
-        const quickReply = new QuickReply({ content });
-        await quickReply.save();
-        res.status(201).json(quickReply);
+        const newReply = new QuickReply({
+            type: 'left',
+            content
+        });
+        await newReply.save();
+        res.json(newReply);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: '저장에 실패했습니다' });
     }
 });
 
-// 删除快捷回复
-router.delete('/quick-replies/:id', authMiddleware, async (req, res) => {
+router.delete('/quick-replies/left/:id', authMiddleware, async (req, res) => {
     try {
-        const result = await QuickReply.findByIdAndDelete(req.params.id);
-        if (!result) {
-            return res.status(404).json({ message: '快捷回复不存在' });
+        const reply = await QuickReply.findOneAndDelete({
+            _id: req.params.id,
+            type: 'left'
+        });
+        if (!reply) {
+            return res.status(404).json({ message: '항목을 찾을 수 없습니다' });
         }
-        res.json({ message: '快捷回复已删除' });
+        res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: '삭제에 실패했습니다' });
     }
 });
 
-// 保存商品信息
+// 右侧快捷回复 API
+router.get('/quick-replies/right', authMiddleware, async (req, res) => {
+    try {
+        const replies = await QuickReply.find({ type: 'right' }).sort('-createdAt');
+        res.json(replies);
+    } catch (error) {
+        res.status(500).json({ message: '서버 오류가 발생했습니다' });
+    }
+});
+
+router.post('/quick-replies/right/:type', authMiddleware, async (req, res) => {
+    try {
+        const { type } = req.params;
+        const data = req.body;
+        
+        const newReply = new QuickReply({
+            type: 'right',
+            replyType: type,
+            content: data.name,
+            settings: data.settings
+        });
+        
+        await newReply.save();
+        res.json(newReply);
+    } catch (error) {
+        res.status(500).json({ message: '저장에 실패했습니다' });
+    }
+});
+
+router.delete('/quick-replies/right/:type/:id', authMiddleware, async (req, res) => {
+    try {
+        const reply = await QuickReply.findOneAndDelete({
+            _id: req.params.id,
+            type: 'right',
+            replyType: req.params.type
+        });
+        if (!reply) {
+            return res.status(404).json({ message: '항목을 찾을 수 없습니다' });
+        }
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ message: '삭제에 실패했습니다' });
+        }
+});
+
+// 商品信息 API
+router.get('/product-info/all', authMiddleware, async (req, res) => {
+    try {
+        const products = await ProductInfo.find().sort('-createdAt');
+        const productsMap = {};
+        // 只返回有效的商品信息
+        products.forEach(product => {
+            if (product && product.settings && product.settings.productName) {
+                productsMap[product._id] = product;
+            }
+        });
+        res.json(productsMap);
+    } catch (error) {
+        res.status(500).json({ message: '서버 오류가 발생했습니다' });
+    }
+});
+
+router.get('/product-info/:id', authMiddleware, async (req, res) => {
+    try {
+        const product = await ProductInfo.findById(req.params.id);
+        if (!product) {
+            return res.status(404).json({ message: '상품을 찾을 수 없습니다' });
+        }
+        res.json(product);
+    } catch (error) {
+        res.status(500).json({ message: '서버 오류가 발생했습니다' });
+    }
+});
+
 router.post('/product-info', authMiddleware, async (req, res) => {
     try {
-        const { productImage, productName, subtitle1, subtitle2, subtitle3, lastModified } = req.body;
+        const { name, settings } = req.body;
         
-        // 验证必填字段
-        if (!productImage || !productName) {
-            return res.status(400).json({ message: '상품 이미지와 상품명은 필수입니다' });
+        // 验证必要字段
+        if (!name || !settings || !settings.productName) {
+            return res.status(400).json({ message: '필수 입력 항목이 누락되었습니다' });
         }
 
-        // 删除旧的商品信息
-        await ProductInfo.deleteMany({});
+        // 检查是否已存在相同名称的商品
+        const existingProduct = await ProductInfo.findOne({ 'settings.productName': settings.productName });
+        if (existingProduct) {
+            return res.status(400).json({ message: '이미 존재하는 상품명입니다' });
+        }
 
-        // 保存到数据库
-        const productInfo = new ProductInfo({
-            productImage,
-            productName,
-            subtitle1,
-            subtitle2,
-            subtitle3,
-            lastModified
+        const newProduct = new ProductInfo({
+            name,
+            settings: {
+                ...settings,
+                lastModified: new Date()
+            }
         });
-
-        await productInfo.save();
-        res.status(201).json(productInfo);
+        
+        await newProduct.save();
+        res.json(newProduct);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Product info save error:', error);
+        res.status(500).json({ message: '저장에 실패했습니다' });
     }
 });
 
-// 获取商品信息
-router.get('/product-info', async (req, res) => {
+router.put('/product-info/:id', authMiddleware, async (req, res) => {
     try {
-        const productInfo = await ProductInfo.findOne().sort({ lastModified: -1 });
-        res.json(productInfo);
+        const { settings, name } = req.body;
+        
+        // 验证请求数据
+        if (!settings || !settings.productName) {
+            return res.status(400).json({ message: '상품명은 필수 입력 항목입니다' });
+        }
+
+        // 检查ID格式
+        if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ message: '잘못된 상품 ID입니다' });
+        }
+
+        // 检查是否存在相同名称的其他商品
+        const existingProduct = await ProductInfo.findOne({
+            'settings.productName': settings.productName,
+            _id: { $ne: req.params.id }
+        });
+        
+        if (existingProduct) {
+            return res.status(400).json({ message: '이미 존재하는 상품명입니다' });
+        }
+
+        // 获取现有产品
+        const currentProduct = await ProductInfo.findById(req.params.id);
+        if (!currentProduct) {
+            return res.status(404).json({ message: '상품을 찾을 수 없습니다' });
+        }
+
+        // 更新产品信息
+        currentProduct.name = name || settings.productName;
+        currentProduct.settings = {
+            ...settings,
+            lastModified: new Date()
+        };
+
+        // 保存更新
+        await currentProduct.save();
+        res.json(currentProduct);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Update product info error:', error);
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({ message: '입력값이 올바르지 않습니다', details: error.message });
+        }
+        res.status(500).json({ message: '수정에 실패했습니다', details: error.message });
     }
 });
 
-// 删除商品信息
-router.delete('/product-info', authMiddleware, async (req, res) => {
+router.delete('/product-info/:id', authMiddleware, async (req, res) => {
     try {
-        await ProductInfo.deleteMany({});
-        res.json({ message: '상품 정보가 삭제되었습니다' });
+        const product = await ProductInfo.findByIdAndDelete(req.params.id);
+        if (!product) {
+            return res.status(404).json({ message: '상품을 찾을 수 없습니다' });
+        }
+        res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: '삭제에 실패했습니다' });
+    }
+});
+
+// 支付信息 API
+router.get('/payment-info/all', authMiddleware, async (req, res) => {
+    try {
+        const payments = await PaymentInfo.find().sort('-createdAt');
+        const paymentsMap = {};
+        payments.forEach(payment => {
+            if (payment && payment.settings && payment.settings.paymentName) {
+                paymentsMap[payment._id] = payment;
+            }
+        });
+        res.json(paymentsMap);
+    } catch (error) {
+        res.status(500).json({ message: '서버 오류가 발생했습니다' });
+    }
+});
+
+router.post('/payment-info', authMiddleware, async (req, res) => {
+    try {
+        const { name, settings } = req.body;
+        if (!name || !settings || !settings.paymentName) {
+            return res.status(400).json({ message: '필수 입력 항목이 누락되었습니다' });
+        }
+        const newPayment = new PaymentInfo({
+            name,
+            settings: {
+                ...settings,
+                lastModified: new Date()
+            }
+        });
+        await newPayment.save();
+        res.json(newPayment);
+    } catch (error) {
+        res.status(500).json({ message: '저장에 실패했습니다' });
+    }
+});
+
+router.put('/payment-info/:id', authMiddleware, async (req, res) => {
+    try {
+        const { settings } = req.body;
+        const payment = await PaymentInfo.findById(req.params.id);
+        if (!payment) {
+            return res.status(404).json({ message: '결제 정보를 찾을 수 없습니다' });
+        }
+        payment.settings = {
+            ...settings,
+            lastModified: new Date()
+        };
+        await payment.save();
+        res.json(payment);
+    } catch (error) {
+        res.status(500).json({ message: '수정에 실패했습니다' });
+    }
+});
+
+router.delete('/payment-info/:id', authMiddleware, async (req, res) => {
+    try {
+        const payment = await PaymentInfo.findByIdAndDelete(req.params.id);
+        if (!payment) {
+            return res.status(404).json({ message: '결제 정보를 찾을 수 없습니다' });
+        }
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ message: '삭제에 실패했습니다' });
+    }
+});
+
+// 支付标题 API
+router.get('/payment/titles', authMiddleware, async (req, res) => {
+    try {
+        const titles = await PaymentInfo.findOne({ type: 'titles' });
+        res.json(titles || {});
+    } catch (error) {
+        res.status(500).json({ message: '서버 오류가 발생했습니다' });
+    }
+});
+
+router.post('/payment/titles', authMiddleware, async (req, res) => {
+    try {
+        const { title1, title2, title3, title4, title5 } = req.body;
+        let titles = await PaymentInfo.findOne({ type: 'titles' });
+        
+        if (titles) {
+            titles.settings = { title1, title2, title3, title4, title5 };
+            await titles.save();
+        } else {
+            titles = new PaymentInfo({
+                name: 'Payment Titles',
+                type: 'titles',
+                settings: { title1, title2, title3, title4, title5 }
+            });
+            await titles.save();
+        }
+        
+        res.json(titles.settings);
+    } catch (error) {
+        res.status(500).json({ message: '저장에 실패했습니다' });
     }
 });
 

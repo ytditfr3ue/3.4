@@ -88,6 +88,32 @@ module.exports = (io) => {
       }
     });
 
+    socket.on('orderConfirmation', async (data) => {
+      try {
+        const userInfo = connectedUsers.get(socket.id);
+        if (!userInfo || userInfo.userType !== 'user') {
+          return;
+        }
+
+        const { messageId, confirmed } = data;
+        const room = await ChatRoom.findById(userInfo.roomId);
+        if (!room || !room.isActive) {
+          socket.emit('roomDeleted');
+          socket.disconnect(true);
+          return;
+        }
+
+        // 广播订单确认状态变更给房间内所有用户
+        io.to(userInfo.roomId).emit('orderStatusChanged', {
+          messageId,
+          confirmed,
+          timestamp: new Date()
+        });
+      } catch (error) {
+        console.error('Order confirmation error:', error);
+      }
+    });
+
     socket.on('disconnect', async () => {
       const userInfo = connectedUsers.get(socket.id);
       if (userInfo) {

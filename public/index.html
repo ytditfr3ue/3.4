@@ -2,105 +2,193 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>채팅 시스템</title>
-    <link rel="stylesheet" href="/css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="description" content="채팅 시스템 관리자 페이지">
+    <meta name="theme-color" content="#4C6EF5">
+    <title>채팅 시스템 관리자</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/admin/style.css">
 </head>
 <body>
     <div id="app">
         <!-- 로그인 페이지 -->
-        <div id="loginPage" class="page">
+        <main id="loginPage" class="page">
             <div class="login-container">
-                <h2>관리자 로그인</h2>
+                <h1>관리자 로그인</h1>
                 <form id="loginForm" autocomplete="on">
-                    <input type="text" id="username" name="username" placeholder="아이디" required autocomplete="username">
-                    <input type="password" id="password" name="password" placeholder="비밀번호" required autocomplete="current-password">
-                    <button type="submit">로그인</button>
+                    <div class="form-group">
+                        <label for="username">아이디</label>
+                        <input 
+                            type="text" 
+                            id="username" 
+                            name="username" 
+                            placeholder="아이디를 입력하세요" 
+                            required 
+                            autocomplete="username"
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="password">비밀번호</label>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            placeholder="비밀번호를 입력하세요" 
+                            required 
+                            autocomplete="current-password"
+                        >
+                    </div>
+                    <button type="submit" class="btn btn-primary">로그인</button>
                 </form>
             </div>
-        </div>
+        </main>
 
         <!-- 관리자 페이지 -->
-        <div id="adminPage" class="page hidden">
+        <main id="adminPage" class="page hidden">
             <div class="admin-container">
-                <div class="admin-header">
-                    <h2>채팅방 관리</h2>
-                    <div class="admin-buttons">
-                        <button id="securityLogsBtn">보안 로그</button>
-                        <button id="changeCredentialsBtn">계정 설정</button>
-                    </div>
-                </div>
-                <div class="create-room">
+                <header class="admin-header">
+                    <h1>채팅방 관리</h1>
+                    <nav class="admin-buttons">
+                        <button id="securityLogsBtn" class="btn btn-secondary">
+                            보안 로그
+                        </button>
+                        <button id="changeCredentialsBtn" class="btn btn-secondary">
+                            계정 설정
+                        </button>
+                    </nav>
+                </header>
+
+                <section class="create-room">
                     <form id="createRoomForm" autocomplete="off">
-                        <input type="text" id="roomName" name="roomName" placeholder="채팅방 이름" required maxlength="50">
-                        <input type="text" id="roomId" name="roomId" placeholder="채팅방 ID (3-7자리 영문/숫자)" required pattern="^[a-zA-Z0-9]{3,7}$">
-                        <button type="submit">채팅방 만들기</button>
+                        <div class="form-group">
+                            <label for="roomName">채팅방 이름</label>
+                            <input 
+                                type="text" 
+                                id="roomName" 
+                                name="roomName" 
+                                placeholder="채팅방 이름을 입력하세요" 
+                                required 
+                                maxlength="50"
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label for="roomId">채팅방 ID</label>
+                            <input 
+                                type="text" 
+                                id="roomId" 
+                                name="roomId" 
+                                placeholder="3-7자리 영문/숫자" 
+                                required 
+                                pattern="^[a-zA-Z0-9]{3,7}$"
+                            >
+                        </div>
+                        <button type="submit" class="btn btn-primary">채팅방 만들기</button>
                     </form>
-                </div>
-                <div class="room-list">
-                    <h3>채팅방 목록</h3>
-                    <div id="roomsList"></div>
-                </div>
+                </section>
+
+                <section class="room-list">
+                    <div class="rooms-header">
+                        <h2>채팅방 목록</h2>
+                        <button class="payment-button btn btn-primary" onclick="showPaymentModal()">결제</button>
+                    </div>
+                    <div id="roomsList" role="list"></div>
+                </section>
             </div>
-        </div>
+        </main>
     </div>
 
-    <!-- 계정 설정 모달 -->
-    <div id="changeCredentialsModal" class="change-credentials-modal hidden">
-        <div class="change-credentials-content">
-            <h3>계정 설정</h3>
-            <form id="changeCredentialsForm" autocomplete="off">
-                <input type="password" id="currentPassword" name="currentPassword" placeholder="현재 비밀번호" required autocomplete="current-password">
-                <input type="text" id="newUsername" name="newUsername" placeholder="새 아이디" required autocomplete="new-username">
-                <input type="password" id="newPassword" name="newPassword" placeholder="새 비밀번호" required autocomplete="new-password">
+    <!-- 모달 섹션 -->
+    <div class="modals">
+        <!-- 계정 설정 모달 -->
+        <dialog id="changeCredentialsModal" class="modal hidden">
+            <div class="modal-content">
+                <h2>계정 설정</h2>
+                <form id="changeCredentialsForm" method="dialog" autocomplete="off">
+                    <div class="form-group">
+                        <label for="currentPassword">현재 비밀번호</label>
+                        <input 
+                            type="password" 
+                            id="currentPassword" 
+                            name="currentPassword" 
+                            placeholder="현재 비밀번호를 입력하세요"
+                            required 
+                            autocomplete="current-password"
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="newUsername">새 아이디</label>
+                        <input 
+                            type="text" 
+                            id="newUsername" 
+                            name="newUsername" 
+                            placeholder="새 아이디를 입력하세요"
+                            required 
+                            autocomplete="new-username"
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword">새 비밀번호</label>
+                        <input 
+                            type="password" 
+                            id="newPassword" 
+                            name="newPassword" 
+                            placeholder="새 비밀번호를 입력하세요"
+                            required 
+                            autocomplete="new-password"
+                        >
+                    </div>
+                    <div class="modal-buttons">
+                        <button type="button" id="cancelCredentialsBtn" class="btn btn-secondary">취소</button>
+                        <button type="submit" class="btn btn-primary">확인</button>
+                    </div>
+                </form>
+            </div>
+        </dialog>
+
+        <!-- 삭제 확인 모달 -->
+        <dialog id="deleteConfirmModal" class="modal hidden">
+            <div class="modal-content">
+                <h2>채팅방 삭제</h2>
+                <p>채팅방 "<span id="deleteRoomName"></span>"을(를) 삭제하시겠습니까?</p>
+                <p class="modal-description">
+                    삭제된 채팅방은 복구할 수 없으며, 모든 채팅 내역이 영구적으로 삭제됩니다.
+                </p>
                 <div class="modal-buttons">
-                    <button type="submit">확인</button>
-                    <button type="button" id="cancelCredentialsBtn" class="cancel-btn">취소</button>
+                    <button id="cancelDelete" class="btn btn-secondary">취소</button>
+                    <button id="confirmDelete" class="btn btn-danger">삭제</button>
                 </div>
-            </form>
-        </div>
+            </div>
+        </dialog>
+
+        <!-- 보안 로그 모달 -->
+        <dialog id="securityLogsModal" class="modal hidden">
+            <div class="modal-content security-logs-modal">
+                <h2>보안 로그</h2>
+                <div class="log-filters">
+                    <select id="logTypeFilter" aria-label="로그 유형 필터">
+                        <option value="all">전체 로그</option>
+                        <option value="blocked">차단된 요청</option>
+                        <option value="banned">차단된 IP</option>
+                    </select>
+                    <button id="refreshLogs" class="btn btn-secondary">새로고침</button>
+                </div>
+                <div class="security-logs-container">
+                    <div id="securityLogs" role="log"></div>
+                </div>
+                <div class="banned-ips-container">
+                    <h3>차단된 IP 목록</h3>
+                    <div id="bannedIPs" role="list"></div>
+                </div>
+                <div class="modal-buttons">
+                    <button id="closeSecurityLogs" class="btn btn-secondary">닫기</button>
+                </div>
+            </div>
+        </dialog>
     </div>
 
-    <!-- 删除确认模态框 -->
-    <div id="deleteConfirmModal" class="modal hidden">
-        <div class="modal-content">
-            <h3>채팅방 삭제</h3>
-            <p>채팅방 "<span id="deleteRoomName"></span>"을(를) 삭제하시겠습니까?</p>
-            <p class="modal-description">삭제된 채팅방은 복구할 수 없으며, 모든 채팅 내역이 영구적으로 삭제됩니다.</p>
-            <div class="modal-buttons">
-                <button id="confirmDelete" class="danger">삭제</button>
-                <button id="cancelDelete" class="cancel-btn">취소</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 安全日志模态框 -->
-    <div id="securityLogsModal" class="modal hidden">
-        <div class="modal-content security-logs-modal">
-            <h3>보안 로그</h3>
-            <div class="log-filters">
-                <select id="logTypeFilter">
-                    <option value="all">전체 로그</option>
-                    <option value="blocked">차단된 요청</option>
-                    <option value="banned">차단된 IP</option>
-                </select>
-                <button id="refreshLogs">새로고침</button>
-            </div>
-            <div class="security-logs-container">
-                <div id="securityLogs"></div>
-            </div>
-            <div class="banned-ips-container">
-                <h4>차단된 IP 목록</h4>
-                <div id="bannedIPs"></div>
-            </div>
-            <div class="modal-buttons">
-                <button id="closeSecurityLogs" class="cancel-btn">닫기</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="/js/main.js"></script>
+    <script src="/socket.io/socket.io.js" defer></script>
+    <script src="/js/main.js" defer></script>
 </body>
 </html> 
